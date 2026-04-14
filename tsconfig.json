@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    // --- Módulos y Compatibilidad ---
+    "module": "NodeNext", // Perfecto para Node.js moderno, maneja CommonJS y ES Modules.
+    "moduleResolution": "NodeNext", // El mecanismo de resolución que acompaña a "NodeNext".
+    "target": "es2022", // Node.js 20 soporta características muy modernas de ECMAScript. es2017 es algo antiguo.
+    "lib": ["es2022"], // Asegura que las definiciones de tipo para ES2022 estén disponibles.
+    "esModuleInterop": true, // Lo tenías bien, mejora la compatibilidad entre CommonJS y ES Modules.
+    "resolveJsonModule": true, // Permite importar archivos .json directamente en el código. Muy útil.
+
+    // --- Calidad y Rigurosidad del Código ---
+    "strict": true, // ¡Excelente! Activa todas las comprobaciones de tipo estrictas.
+    "noImplicitReturns": true, // Lo tenías bien, asegura que todas las rutas de una función devuelvan un valor si se espera.
+    "noUnusedLocals": true, // Lo tenías bien, detecta variables locales declaradas pero no usadas.
+    "forceConsistentCasingInFileNames": true, // Evita problemas entre sistemas operativos con mayúsculas/minúsculas.
+
+    // --- Estructura del Proyecto ---
+    "rootDir": "src", // Especifica que la raíz de tu código fuente es la carpeta 'src'.
+    "outDir": "lib", // La carpeta donde se compilará el JavaScript.
+    "sourceMap": true // Lo tenías bien, genera sourcemaps para facilitar la depuración.
+  },
+  "include": [
+    "src/**/*" // Sé más explícito: incluye todo archivo dentro de src y sus subdirectorios.
+  ],
+  "exclude": [
+    "node_modules", // Nunca incluyas node_modules en la compilación.
+    "lib" // Tampoco incluyas la carpeta de salida.
+  ],
+  "compileOnSave": true
+}

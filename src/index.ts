@@ -312,15 +312,21 @@ export async function procesarConsolidacionDeEnvio(shipmentId: string, traceId: 
     const meliOrder = await fetchOrderDetails(`/orders/${orderId}`, traceId);
     const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
     const billingInfoId = meliOrder.buyer?.billing_info?.id;
-    const [meliShipment, meliBillingInfoPayload, contexto] = await Promise.all([
+    const [meliShipment, contexto] = await Promise.all([
       fetchShipmentDetails(Number(shipmentId), traceId),
-      fetchBillingInfo(siteId, billingInfoId, traceId),
       cargarContextoDelPedido(
         meliOrder.order_items.map((item) => item.item.seller_sku || item.item.id),
         traceId
       ),
     ]);
-    return adaptarPedidoMeli(meliOrder, meliShipment, meliBillingInfoPayload.billing_info, contexto, horasDeCorte, traceId);
+    let meliBillingInfo = null;
+    try {
+      const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
+      meliBillingInfo = meliBillingInfoPayload.billing_info;
+    } catch (error) {
+      logger.warn(`${logPrefix} No se pudo obtener billing info para order ${orderId}: ${(error as Error).message}`);
+    }
+    return adaptarPedidoMeli(meliOrder, meliShipment, meliBillingInfo, contexto, horasDeCorte, traceId);
   });
 
   const pedidosIndividuales = await Promise.all(promesasDePedidos);
@@ -388,10 +394,14 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
   const billingInfoId = meliOrder.buyer?.billing_info?.id;
 
-  const [meliShipment, meliBillingInfoPayload] = await Promise.all([
-    fetchShipmentDetails(meliOrder.shipping.id, traceId),
-    fetchBillingInfo(siteId, billingInfoId, traceId),
-  ]);
+  const meliShipment = await fetchShipmentDetails(meliOrder.shipping.id, traceId);
+  let meliBillingInfo = null;
+  try {
+    const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
+    meliBillingInfo = meliBillingInfoPayload.billing_info;
+  } catch (error) {
+    logger.warn(`${logPrefix} No se pudo obtener billing info para order ${meliOrder.id}: ${(error as Error).message}`);
+  }
 
   // ==================================================================
   // ===================== INICIO DEL FILTRO CORREGIDO =================
@@ -415,7 +425,7 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   logger.info(`${logPrefix} FASE 3 (Calculate): Datos de MELI obtenidos.`);
 
   logger.info(`${logPrefix} Mapeando datos a entidades de DB...`);
-  const dbOrder = mapToDbOrder(meliOrder, meliBillingInfoPayload.billing_info, traceId);
+  const dbOrder = mapToDbOrder(meliOrder, meliBillingInfo, traceId);
   const dbOrderItems = mapToDbOrderItems(meliOrder, traceId);
   const dbShipment = mapToDbShipment(meliShipment, meliOrder.id, meliOrder.pack_id ? meliOrder.pack_id.toString() : null, traceId);
 
@@ -690,7 +700,7 @@ export const reprocesarEnviosInconsistentes = functions.https.onRequest(async (r
             await doc.ref.update({
               estado_de_carga: "sin carga", // Mantener como pendiente para futuros reintentos
               ultimoIntento: Timestamp.now(),
-              ultimoError: "No se pudo consolidar: El hay órdenes disponibles en la DB local",
+              ultimoError: "No se pudo consolidar: Hay órdenes disponibles en la DB local",
             });
             return {
               shipmentId,

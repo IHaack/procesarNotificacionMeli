@@ -281,7 +281,7 @@ export function determinarTipoML(logisticType?: string): string {
 export function adaptarPedidoMeli(
   meliOrder: MeliOrderPayload,
   meliShipment: MeliShipmentPayload,
-  meliBillingInfo: MeliBillingInfo,
+  meliBillingInfo: MeliBillingInfo | null,
   contexto: ContextoPedido,
   horasDeCorte: HorasDeCorte,
   traceId: string

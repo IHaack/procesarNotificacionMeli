@@ -21,7 +21,7 @@ import { Order, OrderItem, Shipment } from "../interfaces/db.interfaces";
  */
 export function mapToDbOrder(
   meliOrder: MeliOrderPayload,
-  meliBillingInfo: MeliBillingInfo,
+  meliBillingInfo: MeliBillingInfo | null,
   traceId: string
 ): Order {
   const logPrefix = `[Trace: ${traceId}] [mapToDbOrder]`;
@@ -43,10 +43,10 @@ export function mapToDbOrder(
         nickname: meliOrder.buyer.nickname,
         first_name: meliOrder.buyer.first_name,
         last_name: meliOrder.buyer.last_name,
-        billing_info: {
+        billing_info: meliBillingInfo ? {
           doc_type: meliBillingInfo.doc_type,
           doc_number: meliBillingInfo.doc_number,
-        },
+        } : undefined,
       },
       total_amount: meliOrder.total_amount,
       paid_amount: meliOrder.paid_amount,

@@ -1,0 +1,2943 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "BaseDeDatosProductosBSale",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clasificacionDeProducto",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "NombreProducto",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "BaseDeDatosProductosBSale",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "State",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "SKU",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "kpis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "MercadoLibrePublicaciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "logistic_type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "peso_facturable_g",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sku",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "MercadoLibrePublicaciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "logistic_type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sku",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaEmision",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaEmision",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaFinalizacion",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaInicio",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaRecepcionApp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ordenesDeCompra",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estadoRecepcionApp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "proveedor.bsaleId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaEmision",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estatus_pago",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "origen",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoEnProceso",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraTomado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoMarcado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "estatus_pago",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaCargado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaParaConsulta",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBS",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "pedidoTomado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBSDevelopment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "CodigoSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosBSDevelopment",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "TipoDePedido",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaOriginalPedido",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "PedidosFull",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaDeCreacion",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "NumeroDeEnvio",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "diaEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mesEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "anoEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "diaEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mesEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "anoEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "diaEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mesEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "anoEscaneado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "UsuarioReferencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "UsuarioReferencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "Picking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "UsuarioReferencia",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraPicking",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "recepciones",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ordenDeCompraId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaRecepcion",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "RegistroPick",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "idtotalizacionPick",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraEscaneado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ReportesSimulacion",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "TotalizacionPick",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "idUsuario",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "NSeguimiento",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "TotalizacionPick",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "PedidoFinalizado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "FechaHoraFinalizado",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "fcm_tokens",
+      "fieldPath": "fcm_token",
+      "ttl": false,
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    }
+  ]
+}

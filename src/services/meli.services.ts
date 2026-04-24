@@ -72,21 +72,49 @@ export async function fetchOrderDetails(
     );
     return response.data;
   } catch (error: any) {
-    // Si la API responde con error, se loguea el detalle para facilitar el debugging.
+    // Extraer información del error para logging detallado
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+    
+    // Log estructurado con todos los detalles
     logger.error(
       `${logPrefix} Error al obtener detalles del pedido de MELI para ${resourceUrl}.`,
       {
         traceId: traceId,
         url: fullUrl,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
+        status: statusCode,
+        data: errorData,
+        message: errorMessage,
       }
     );
-    // TODO: Mejorar el manejo de errores para distinguir entre errores de red, autenticación y datos no encontrados.
-    throw new Error(
-      `${logPrefix} Fallo al contactar la API de MELI para el recurso ${resourceUrl}.`
-    );
+    
+    // Construir mensaje de error descriptivo con información clave
+    let mensajeDetallado = `${logPrefix} Fallo al contactar la API de MELI para el recurso ${resourceUrl}`;
+    
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+      
+      // Agregar interpretación del código de estado
+      if (statusCode === 404) {
+        mensajeDetallado += ` (Orden no encontrada)`;
+      } else if (statusCode === 401 || statusCode === 403) {
+        mensajeDetallado += ` (Error de autenticación)`;
+      } else if (statusCode === 429) {
+        mensajeDetallado += ` (Rate limit excedido)`;
+      } else if (statusCode >= 500) {
+        mensajeDetallado += ` (Error del servidor de MELI)`;
+      }
+    }
+    
+    // Agregar mensaje de error de la API si existe
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+    
+    throw new Error(mensajeDetallado);
   }
 }
 
@@ -112,19 +140,44 @@ export async function fetchShipmentDetails(
     logger.info(`${logPrefix} Detalles del envío ${shipmentId} obtenidos correctamente.`);
     return response.data;
   } catch (error: any) {
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+    
     logger.error(
       `${logPrefix} Error al obtener detalles del envío de MELI para ${shipmentId}.`,
       {
         traceId: traceId,
         url: fullUrl,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
+        status: statusCode,
+        data: errorData,
+        message: errorMessage,
       }
     );
-    throw new Error(
-      `${logPrefix} Fallo al contactar la API de MELI para el envío ${shipmentId}.`
-    );
+    
+    let mensajeDetallado = `${logPrefix} Fallo al contactar la API de MELI para el envío ${shipmentId}`;
+    
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+      
+      if (statusCode === 404) {
+        mensajeDetallado += ` (Envío no encontrado)`;
+      } else if (statusCode === 401 || statusCode === 403) {
+        mensajeDetallado += ` (Error de autenticación)`;
+      } else if (statusCode === 429) {
+        mensajeDetallado += ` (Rate limit excedido)`;
+      } else if (statusCode >= 500) {
+        mensajeDetallado += ` (Error del servidor de MELI)`;
+      }
+    }
+    
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+    
+    throw new Error(mensajeDetallado);
   }
 }
 
@@ -168,27 +221,49 @@ export async function fetchBillingInfo(
     logger.info(`${logPrefix} Información de facturación obtenida correctamente para ${fullUrl}.`);
     return response.data;
   } catch (error: any) {
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+    
     logger.error(
       `${logPrefix} Error al obtener la info de facturación de MELI para ${fullUrl}.`,
       {
         traceId: traceId,
         url: fullUrl,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
+        status: statusCode,
+        data: errorData,
+        message: errorMessage,
       }
     );
 
-    if (error.response?.status === 404) {
+    if (statusCode === 404) {
       logger.warn(
         `${logPrefix} La información de facturación no existe en MELI para ${siteId}/${billingInfoId}. Retornando datos vacíos.`
       );
       return { billing_info: { doc_type: null, doc_number: null } };
     }
 
-    throw new Error(
-      `${logPrefix} Fallo al contactar la API de MELI para la facturación de ${fullUrl}.`
-    );
+    let mensajeDetallado = `${logPrefix} Fallo al contactar la API de MELI para la facturación de ${fullUrl}`;
+    
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+      
+      if (statusCode === 401 || statusCode === 403) {
+        mensajeDetallado += ` (Error de autenticación)`;
+      } else if (statusCode === 429) {
+        mensajeDetallado += ` (Rate limit excedido)`;
+      } else if (statusCode >= 500) {
+        mensajeDetallado += ` (Error del servidor de MELI)`;
+      }
+    }
+    
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+    
+    throw new Error(mensajeDetallado);
   }
 }
 
@@ -215,18 +290,43 @@ export async function fetchPackDetails(
     logger.info(`${logPrefix} Detalles del pack ${packId} obtenidos correctamente.`);
     return response.data;
   } catch (error: any) {
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+    
     logger.error(
       `${logPrefix} Error al obtener detalles del pack de MELI para ${packId}.`,
       {
         traceId: traceId,
         url: fullUrl,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
+        status: statusCode,
+        data: errorData,
+        message: errorMessage,
       }
     );
-    throw new Error(
-      `${logPrefix} Fallo al contactar la API de MELI para el pack ${packId}.`
-    );
+    
+    let mensajeDetallado = `${logPrefix} Fallo al contactar la API de MELI para el pack ${packId}`;
+    
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+      
+      if (statusCode === 404) {
+        mensajeDetallado += ` (Pack no encontrado)`;
+      } else if (statusCode === 401 || statusCode === 403) {
+        mensajeDetallado += ` (Error de autenticación)`;
+      } else if (statusCode === 429) {
+        mensajeDetallado += ` (Rate limit excedido)`;
+      } else if (statusCode >= 500) {
+        mensajeDetallado += ` (Error del servidor de MELI)`;
+      }
+    }
+    
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+    
+    throw new Error(mensajeDetallado);
   }
 }

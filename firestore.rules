@@ -1,0 +1,336 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /PedidosFull/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /notificacionesFull/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /LogsEscaneo/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /enviosConInconsistencias/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /OrderItems/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /Orders/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if false;
+    }
+
+    match /Shipments/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /InyeccionDePedidos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /ordenesMercadoLibre/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /PedidosBSDevelopment/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /ResumenPedidos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /configuraciones/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /oAuthMetadata/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /webhookRecibidosMercadoLibre/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /sincronizacionAutomatica/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /webhooksRecibidos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /oAuthResponses/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /PedidosConFallas/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatosImagenes/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatosPacksBSale/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatosPedidosBSale/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatosProductosBSale/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatosServiciosBSale/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /PedidosBS/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /ColoresTextos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /PedidosBsale/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /TablaResumen/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /RegistroPick/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /TotalizacionPick/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /Pedidos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    // Allow admins to read and write all documents
+    match /{document=**} {
+      allow read, write: if hasAnyRole(["ADMIN", "OWNER"]);
+    }
+
+    // Rowy: Allow signed in users to read Rowy configuration and admins to write
+    match /_rowy_/{docId} {
+      allow read: if request.auth.token.roles.size() > 0;
+      allow write: if hasAnyRole(["ADMIN", "OWNER"]);
+    	match /{document=**} {
+        allow read: if request.auth.token.roles.size() > 0;
+        allow write: if hasAnyRole(["ADMIN", "OWNER"]);
+      }
+      match /schema/{tableId} {
+        allow update: if canModify(tableId,'pc')
+        match /{document=**} {allow read,write: if canModify(tableId,'pc')}
+      }
+       match /groupSchema/{tableId} {
+        allow update: if canModify(tableId,'cg')
+        match /{document=**} {allow read,write: if canModify(tableId,'cg')}
+      }
+    	function canModify(tableId,tableType) {
+      	return hasAnyRole(get(/databases/$(database)/documents/_rowy_/settings)
+        .data.tablesSettings[tableType][tableId].modifiableBy)
+	   	}
+    }
+    // Rowy: Allow users to edit their settings
+    match /_rowy_/userManagement/users/{userId} {
+      allow get, update, delete: if isDocOwner(userId);
+      allow create: if request.auth.token.roles.size() > 0;
+    }
+    // Rowy: Allow public to read public Rowy configuration
+    match /_rowy_/publicSettings {
+      allow get: if true;
+    }
+
+    // Rowy: Utility functions
+    function isDocOwner(docId) {
+      return request.auth != null && (request.auth.uid == resource.id || request.auth.uid == docId);
+    }
+    function hasAnyRole(roles) {
+      return request.auth != null && request.auth.token.roles.hasAny(roles);
+    }
+
+    match /ff_user_push_notifications/{document} {
+      allow create: if /databases/$(database)/documents/users/$(request.auth.uid) == request.resource.data.sender;
+      allow read: if false;
+      allow write: if false;
+      allow delete: if false;
+    }
+
+    match /Picking/{parent}/ItemsPicking/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /{path=**}/ItemsPicking/{document} {
+      allow read: if true;
+    }
+
+
+    match /Picking/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /BaseDeDatos/{parent}/Categorias/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /{path=**}/Categorias/{document} {
+      allow read: if true;
+    }
+
+
+    match /users/{parent}/Pickings/{document} {
+      allow create: if request.auth.uid == parent;
+      allow read: if true;
+      allow write: if request.auth.uid == parent;
+      allow delete: if false;
+    }
+
+    match /BaseDeDatos/{document} {
+      allow create: if true;
+      allow read: if true;
+      allow write: if true;
+      allow delete: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if request.auth.token.email.matches("firebase@flutterflow.io");
+    }
+
+    match /users/{document} {
+      allow create: if request.auth.uid == document;
+      allow read: if true;
+      allow write: if request.auth.uid == document;
+      allow delete: if request.auth.uid == document;
+    }
+
+
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2028, 10, 24);
+    }
+  }
+}

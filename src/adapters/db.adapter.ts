@@ -46,7 +46,7 @@ export function mapToDbOrder(
         billing_info: meliBillingInfo ? {
           doc_type: meliBillingInfo.doc_type,
           doc_number: meliBillingInfo.doc_number,
-        } : undefined,
+        } : null,
       },
       total_amount: meliOrder.total_amount,
       paid_amount: meliOrder.paid_amount,

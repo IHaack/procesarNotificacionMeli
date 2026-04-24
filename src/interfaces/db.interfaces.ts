@@ -38,7 +38,7 @@ export interface Order {
     billing_info?: {
       doc_type: string | null;
       doc_number: string | null;
-    };
+    } | null;
   };
   total_amount: number;
   paid_amount: number;

@@ -309,27 +309,85 @@ export async function procesarConsolidacionDeEnvio(shipmentId: string, traceId: 
   logger.info(`${logPrefix} 📋 Generando ${orderIds.length} documento(s) individual(es) en memoria...`);
   const promesasDePedidos = orderIds.map(async (orderId) => {
     logger.info(`${logPrefix} Procesando order ${orderId}...`);
-    const meliOrder = await fetchOrderDetails(`/orders/${orderId}`, traceId);
-    const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
-    const billingInfoId = meliOrder.buyer?.billing_info?.id;
-    const [meliShipment, contexto] = await Promise.all([
-      fetchShipmentDetails(Number(shipmentId), traceId),
-      cargarContextoDelPedido(
-        meliOrder.order_items.map((item) => item.item.seller_sku || item.item.id),
-        traceId
-      ),
-    ]);
-    let meliBillingInfo = null;
+    
     try {
-      const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
-      meliBillingInfo = meliBillingInfoPayload.billing_info;
+      const meliOrder = await fetchOrderDetails(`/orders/${orderId}`, traceId);
+      const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
+      const billingInfoId = meliOrder.buyer?.billing_info?.id;
+      const [meliShipment, contexto] = await Promise.all([
+        fetchShipmentDetails(Number(shipmentId), traceId),
+        cargarContextoDelPedido(
+          meliOrder.order_items.map((item) => item.item.seller_sku || item.item.id),
+          traceId
+        ),
+      ]);
+      let meliBillingInfo = null;
+      try {
+        const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
+        meliBillingInfo = meliBillingInfoPayload.billing_info;
+      } catch (error) {
+        logger.warn(`${logPrefix} No se pudo obtener billing info para order ${orderId}: ${(error as Error).message}`);
+      }
+      return adaptarPedidoMeli(meliOrder, meliShipment, meliBillingInfo, contexto, horasDeCorte, traceId);
     } catch (error) {
-      logger.warn(`${logPrefix} No se pudo obtener billing info para order ${orderId}: ${(error as Error).message}`);
+      const err = error as Error;
+      const errorMsg = err.message;
+      
+      // Manejar errores 403/404 sin romper la consolidación completa
+      if (errorMsg.includes('HTTP 403') || errorMsg.includes('HTTP 404')) {
+        const errorType = errorMsg.includes('HTTP 403') ? 'permission_denied' : 'not_found';
+        const errorCode = errorMsg.includes('HTTP 403') ? 403 : 404;
+        const errorDescription = errorMsg.includes('HTTP 403') 
+          ? 'Sin permisos de acceso a esta orden'
+          : 'Orden no encontrada en MELI (inconsistencia de datos)';
+        
+        logger.warn(
+          `${logPrefix} ⚠️ No se pudo obtener order ${orderId} desde MELI: ${errorDescription}`
+        );
+        logger.warn(`${logPrefix} Detalle: ${errorMsg}`);
+        
+        // Registrar en pedidosConError
+        await db.collection(firestoreCollections.failedOrders).doc(orderId).set({
+          resource: `/orders/${orderId}`,
+          error_type: errorType,
+          error_code: errorCode,
+          error_message: errorDescription,
+          meli_error_detail: errorMsg,
+          timestamp: Timestamp.now(),
+          trace_id: traceId,
+          shipment_id: shipmentId,
+          context: 'consolidation_flow',
+        }, { merge: true });
+        
+        // Retornar null para filtrar después
+        return null;
+      }
+      
+      // Para otros errores, propagar
+      throw error;
     }
-    return adaptarPedidoMeli(meliOrder, meliShipment, meliBillingInfo, contexto, horasDeCorte, traceId);
   });
 
-  const pedidosIndividuales = await Promise.all(promesasDePedidos);
+  const pedidosIndividualesConNulos = await Promise.all(promesasDePedidos);
+  
+  // Filtrar órdenes que fallaron con 403/404
+  const pedidosIndividuales = pedidosIndividualesConNulos.filter(p => p !== null) as PedidosBSDocument[];
+  
+  if (pedidosIndividuales.length === 0) {
+    logger.error(
+      `${logPrefix} ❌ NINGUNA orden pudo ser procesada. Todas fallaron con errores 403/404.`
+    );
+    throw new Error(`${logPrefix} No hay órdenes válidas para consolidar en shipment ${shipmentId}`);
+  }
+  
+  if (pedidosIndividuales.length < orderIds.length) {
+    const ordenesExitosas = pedidosIndividuales.length;
+    const ordenesFallidas = orderIds.length - ordenesExitosas;
+    logger.warn(
+      `${logPrefix} ⚠️ CONSOLIDACIÓN PARCIAL: ${ordenesExitosas} orden(es) procesada(s), ${ordenesFallidas} orden(es) fallida(s) (403/404)`
+    );
+  }
+  
   logger.info(`${logPrefix} ✅ ${pedidosIndividuales.length} documento(s) individual(es) generado(s) correctamente.`);
 
   logger.info(`${logPrefix} 🔀 Consolidando ${pedidosIndividuales.length} pedido(s) en documento final...`);
@@ -383,7 +441,66 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   logger.info(`${logPrefix} Iniciado para recurso: ${resource}`);
 
   logger.info(`${logPrefix} FASE 3 (Calculate): Obteniendo datos de MELI...`);
-  const meliOrder = await fetchOrderDetails(resource, traceId);
+  logger.info(`${logPrefix} 📡 PASO 1: Obteniendo detalles de la orden...`);
+  
+  // Manejo especial para errores recuperables (403, 404)
+  let meliOrder;
+  try {
+    meliOrder = await fetchOrderDetails(resource, traceId);
+  } catch (error) {
+    const err = error as Error;
+    const errorMsg = err.message;
+    const orderId = resource.split('/').pop() || 'unknown';
+    
+    // Detectar si es un error 403 (sin permisos)
+    if (errorMsg.includes('HTTP 403')) {
+      logger.warn(
+        `${logPrefix} ⚠️ ERROR DE PERMISOS: Esta orden no pertenece a la cuenta actual o no hay acceso.`
+      );
+      logger.warn(`${logPrefix} Detalle: ${errorMsg}`);
+      
+      await db.collection(firestoreCollections.failedOrders).doc(orderId).set({
+        resource: resource,
+        error_type: 'permission_denied',
+        error_code: 403,
+        error_message: 'La orden no pertenece a la cuenta vinculada o no hay permisos de acceso',
+        meli_error_detail: errorMsg,
+        timestamp: Timestamp.now(),
+        trace_id: traceId,
+        topic: notification.topic,
+      }, { merge: true });
+      
+      logger.info(`${logPrefix} Orden registrada en pedidosConError. Marcando notificación como procesada.`);
+      return;
+    }
+    
+    // Detectar si es un error 404 (orden no encontrada)
+    if (errorMsg.includes('HTTP 404')) {
+      logger.warn(
+        `${logPrefix} ⚠️ ORDEN NO ENCONTRADA: La orden no existe en MELI (posiblemente cancelada o eliminada).`
+      );
+      logger.warn(`${logPrefix} Detalle: ${errorMsg}`);
+      
+      await db.collection(firestoreCollections.failedOrders).doc(orderId).set({
+        resource: resource,
+        error_type: 'not_found',
+        error_code: 404,
+        error_message: 'La orden no existe en MercadoLibre (cancelada, eliminada o datos inconsistentes)',
+        meli_error_detail: errorMsg,
+        timestamp: Timestamp.now(),
+        trace_id: traceId,
+        topic: notification.topic,
+      }, { merge: true });
+      
+      logger.info(`${logPrefix} Orden registrada en pedidosConError. Marcando notificación como procesada.`);
+      return;
+    }
+    
+    // Para otros errores (500, timeout, etc.), propagar el error para retry
+    throw error;
+  }
+  
+  logger.info(`${logPrefix} ✅ Orden obtenida. ID: ${meliOrder.id}, Status: ${meliOrder.status}`);
 
   if (meliOrder.status !== 'paid') {
     logger.warn(`${logPrefix} La orden no está pagada (status: ${meliOrder.status}). Finalizando.`);
@@ -393,14 +510,19 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
 
   const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
   const billingInfoId = meliOrder.buyer?.billing_info?.id;
+  logger.info(`${logPrefix} 📡 PASO 2: Obteniendo shipment. Shipment ID: ${meliOrder.shipping.id}`);
 
   const meliShipment = await fetchShipmentDetails(meliOrder.shipping.id, traceId);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic_type}`);
+  
+  logger.info(`${logPrefix} 📡 PASO 3: Obteniendo billing info (opcional)...`);
   let meliBillingInfo = null;
   try {
     const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
     meliBillingInfo = meliBillingInfoPayload.billing_info;
+    logger.info(`${logPrefix} ✅ Billing info obtenida.`);
   } catch (error) {
-    logger.warn(`${logPrefix} No se pudo obtener billing info para order ${meliOrder.id}: ${(error as Error).message}`);
+    logger.warn(`${logPrefix} ⚠️ No se pudo obtener billing info para order ${meliOrder.id}: ${(error as Error).message}`);
   }
 
   // ==================================================================
@@ -424,23 +546,55 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
 
   logger.info(`${logPrefix} FASE 3 (Calculate): Datos de MELI obtenidos.`);
 
-  logger.info(`${logPrefix} Mapeando datos a entidades de DB...`);
+  logger.info(`${logPrefix} 🔄 PASO 4: Mapeando datos a entidades de DB...`);
+  logger.info(`${logPrefix} 🔄 PASO 4a: Mapeando Order...`);
   const dbOrder = mapToDbOrder(meliOrder, meliBillingInfo, traceId);
+  logger.info(`${logPrefix} ✅ Order mapeada. ID: ${dbOrder.id}`);
+  
+  logger.info(`${logPrefix} 🔄 PASO 4b: Mapeando OrderItems...`);
   const dbOrderItems = mapToDbOrderItems(meliOrder, traceId);
+  logger.info(`${logPrefix} ✅ OrderItems mapeados. Cantidad: ${dbOrderItems.length}`);
+  
+  logger.info(`${logPrefix} 🔄 PASO 4c: Mapeando Shipment...`);
   const dbShipment = mapToDbShipment(meliShipment, meliOrder.id, meliOrder.pack_id ? meliOrder.pack_id.toString() : null, traceId);
+  logger.info(`${logPrefix} ✅ Shipment mapeado. ID: ${dbShipment.id}`);
 
   logger.info(`${logPrefix} FASE 4 (Execute): Iniciando transacción para guardar en DB normalizada.`);
-  await db.runTransaction(async (transaction) => {
-    const orderRef = db.collection(firestoreCollections.orders).doc(dbOrder.id.toString());
-    const shipmentRef = db.collection(firestoreCollections.shipments).doc(dbShipment.id.toString());
-    transaction.set(orderRef, dbOrder);
-    transaction.set(shipmentRef, dbShipment);
-    dbOrderItems.forEach((item) => {
-      const itemRef = db.collection(firestoreCollections.orderItems).doc();
-      transaction.set(itemRef, item);
+  logger.info(`${logPrefix} 💾 PASO 5: Preparando transacción...`);
+  logger.info(`${logPrefix} 💾 Colecciones destino: Orders=${firestoreCollections.orders}, Shipments=${firestoreCollections.shipments}, OrderItems=${firestoreCollections.orderItems}`);
+  
+  try {
+    await db.runTransaction(async (transaction) => {
+      logger.info(`${logPrefix} 💾 Transacción iniciada. Guardando Order ID: ${dbOrder.id}`);
+      const orderRef = db.collection(firestoreCollections.orders).doc(dbOrder.id.toString());
+      const shipmentRef = db.collection(firestoreCollections.shipments).doc(dbShipment.id.toString());
+      transaction.set(orderRef, dbOrder);
+      logger.info(`${logPrefix} 💾 Order agregada a transacción`);
+      
+      transaction.set(shipmentRef, dbShipment);
+      logger.info(`${logPrefix} 💾 Shipment agregado a transacción`);
+      
+      dbOrderItems.forEach((item, index) => {
+        const itemRef = db.collection(firestoreCollections.orderItems).doc();
+        transaction.set(itemRef, item);
+        logger.info(`${logPrefix} 💾 OrderItem ${index + 1}/${dbOrderItems.length} agregado a transacción`);
+      });
+      logger.info(`${logPrefix} 💾 Todos los documentos agregados. Confirmando transacción...`);
     });
-  });
-  logger.info(`${logPrefix} FASE 4 (Execute): Transacción completada. Guardados: 1 orden, ${dbOrderItems.length} ítems, 1 envío.`);
+    logger.info(`${logPrefix} ✅ FASE 4 (Execute): Transacción completada exitosamente!`);
+    logger.info(`${logPrefix} ✅ Guardados: 1 orden, ${dbOrderItems.length} ítems, 1 envío.`);
+  } catch (transactionError) {
+    const txErr = transactionError as Error;
+    logger.error(`${logPrefix} ❌ ERROR EN TRANSACCIÓN DE FIRESTORE ❌`);
+    logger.error(`${logPrefix} Mensaje: ${txErr.message}`);
+    logger.error(`${logPrefix} Stack: ${txErr.stack}`);
+    logger.error(`${logPrefix} Datos que se intentaron guardar:`, {
+      orderKeys: Object.keys(dbOrder),
+      shipmentKeys: Object.keys(dbShipment),
+      orderItemsCount: dbOrderItems.length,
+    });
+    throw txErr;
+  }
 
   // =================================================================
   // TAREA 2: Trigger Automático de Reintento
@@ -619,12 +773,17 @@ export const procesarNotificacionMeli = onDocumentCreated(
       await docRef.update({ status: "processed", processing_finished_at: Timestamp.now() });
     } catch (error) {
       const err = error as Error;
+      // LOG MEJORADO: Mensaje de error visible en el log principal
+      logger.error(`${logPrefix} ❌ ERROR FATAL EN EL PIPELINE ❌`);
+      logger.error(`${logPrefix} Mensaje: ${err.message}`);
+      logger.error(`${logPrefix} Stack: ${err.stack}`);
+      logger.error(`${logPrefix} Payload de notificación:`, notification);
+      
+      // También log estructurado para análisis
       logger.error(`${logPrefix} Error fatal en el pipeline.`, {
-        // --- INICIO: LOG DE ERROR DETALLADO ---
         errorMessage: err.message,
         errorStack: err.stack,
-        notificationPayload: notification, // Se añade el payload completo para contexto.
-        // --- FIN: LOG DE ERROR DETALLADO ---
+        notificationPayload: notification,
       });
       await docRef.update({ status: "error", error_message: err.message });
       throw error;
@@ -943,3 +1102,263 @@ export const notificarInconsistenciaPorEmail = onDocumentWritten(
     }
   }
 );
+
+// =================================================================
+// ============ SIMULACIÓN DE WEBHOOKS PARA INCONSISTENCIAS ========
+// =================================================================
+
+/**
+ * Función auxiliar para crear un delay (espera) de forma asíncrona.
+ * Útil para evitar sobrecargar el sistema al inyectar webhooks masivamente.
+ * 
+ * @param ms - Tiempo de espera en milisegundos
+ * @returns Promise que se resuelve después del tiempo especificado
+ */
+function esperarMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Verifica si ya existe un webhook para una orden específica.
+ * 
+ * @param orderId - ID de la orden a verificar
+ * @param traceId - ID de trazabilidad para logging
+ * @returns true si el webhook ya existe, false si no existe
+ */
+async function verificarWebhookExistente(
+  orderId: string,
+  traceId: string
+): Promise<boolean> {
+  const logPrefix = `[Trace: ${traceId}] [verificarWebhookExistente]`;
+  const resource = `/orders/${orderId}`;
+  
+  try {
+    const snapshot = await db
+      .collection(firestoreCollections.meliNotifications)
+      .where("resource", "==", resource)
+      .limit(1)
+      .get();
+    
+    const existe = !snapshot.empty;
+    
+    if (existe) {
+      logger.info(`${logPrefix} Webhook ya existe para order ${orderId}. Saltando.`);
+    }
+    
+    return existe;
+  } catch (error) {
+    const err = error as Error;
+    logger.error(`${logPrefix} Error al verificar webhook existente para order ${orderId}`, {
+      error: err.message,
+    });
+    // En caso de error, asumir que no existe para continuar
+    return false;
+  }
+}
+
+/**
+ * Crea un documento de webhook simulado en la colección webhookRecibidosMercadoLibre.
+ * El documento se crea SIN el campo 'status' para que el trigger procesarNotificacionMeli
+ * lo detecte y procese como una notificación nueva.
+ * 
+ * @param orderId - ID de la orden para la cual crear el webhook
+ * @param traceId - ID de trazabilidad para logging
+ * @returns Promise que se resuelve cuando se crea el documento
+ */
+async function crearWebhookSimulado(
+  orderId: string,
+  traceId: string
+): Promise<void> {
+  const logPrefix = `[Trace: ${traceId}] [crearWebhookSimulado]`;
+  const resource = `/orders/${orderId}`;
+  const webhookId = uuidv4();
+  
+  const webhookData = {
+    application_id: 2221674115246629,
+    attempts: 1,
+    fechaHoraRecepcionEnFuncion: Timestamp.now(),
+    idWML: webhookId,
+    received: Timestamp.now(),
+    sent: Timestamp.now(),
+    resource: resource,
+    topic: "orders_v2",
+    user_id: 454112654,
+    // IMPORTANTE: NO incluir campo 'status' para que el trigger lo procese
+  };
+  
+  try {
+    await db
+      .collection(firestoreCollections.meliNotifications)
+      .doc(webhookId)
+      .set(webhookData);
+    
+    logger.info(`${logPrefix} ✅ Webhook simulado creado para order ${orderId}`, {
+      webhookId,
+      resource,
+    });
+  } catch (error) {
+    const err = error as Error;
+    logger.error(`${logPrefix} ❌ Error al crear webhook simulado para order ${orderId}`, {
+      error: err.message,
+      stack: err.stack,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Cloud Function HTTP que simula la inyección de webhooks para órdenes pendientes.
+ * 
+ * **PROPÓSITO:**
+ * Lee órdenes esperadas desde enviosConInconsistencias (estado "sin carga") y crea
+ * webhooks simulados para disparar el procesamiento normal del pipeline.
+ * 
+ * **FLUJO:**
+ * 1. Busca documentos en enviosConInconsistencias con estado_de_carga = "sin carga"
+ * 2. Extrae ordenesEsperadas de cada documento
+ * 3. Para cada order ID:
+ *    a. Verifica si ya existe webhook en webhookRecibidosMercadoLibre
+ *    b. Si NO existe, crea documento de webhook simulado
+ *    c. Espera 500ms antes de procesar la siguiente
+ * 
+ * **SEGURIDAD:**
+ * Requiere Bearer token en header Authorization (schedulerSecret)
+ * 
+ * **USO:**
+ * curl --location 'https://[URL]/simularWebhooksParaInconsistencias' \
+ *   --header 'Authorization: Bearer [SECRET]'
+ */
+export const simularWebhooksParaInconsistencias = functions.https.onRequest(async (req, res) => {
+  const traceId = uuidv4();
+  const logPrefix = `[Trace: ${traceId}] [SimularWebhooks]`;
+
+  logger.info(`${logPrefix} ========================================`);
+  logger.info(`${logPrefix} INICIO: Simulación de webhooks para órdenes pendientes`);
+  logger.info(`${logPrefix} ========================================`);
+
+  // =================================================================
+  // FASE 1: VALIDACIÓN DE SEGURIDAD
+  // =================================================================
+  if (req.headers.authorization !== `Bearer ${securityConfig.schedulerSecret}`) {
+    logger.error(`${logPrefix} ❌ Error de autorización. Secreto inválido o ausente.`);
+    res.status(401).send("Unauthorized");
+    return;
+  }
+  
+  logger.info(`${logPrefix} ✅ FASE 1: Autenticación exitosa`);
+
+  try {
+    // =================================================================
+    // FASE 2: BÚSQUEDA DE DOCUMENTOS PENDIENTES
+    // =================================================================
+    logger.info(`${logPrefix} FASE 2: Buscando documentos con estado "sin carga"...`);
+    
+    const snapshot = await db
+      .collection(firestoreCollections.reviewQueue)
+      .where("estado_de_carga", "==", "sin carga")
+      .get();
+
+    if (snapshot.empty) {
+      logger.info(`${logPrefix} No se encontraron documentos pendientes. Finalizando.`);
+      res.status(200).send("OK: No hay órdenes pendientes para procesar.");
+      return;
+    }
+
+    logger.info(`${logPrefix} ✅ Encontrados ${snapshot.size} documento(s) con estado "sin carga"`);
+
+    // =================================================================
+    // FASE 3: EXTRACCIÓN DE ÓRDENES ESPERADAS
+    // =================================================================
+    logger.info(`${logPrefix} FASE 3: Extrayendo órdenes esperadas de cada documento...`);
+    
+    const todasLasOrdenes: string[] = [];
+    
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as InconsistencyLog;
+      const ordenesEsperadas = data.ordenesEsperadas || [];
+      
+      for (const orden of ordenesEsperadas) {
+        if (orden.id) {
+          todasLasOrdenes.push(orden.id);
+        }
+      }
+      
+      logger.info(`${logPrefix} Documento ${doc.id}: ${ordenesEsperadas.length} orden(es) esperada(s)`);
+    }
+    
+    const ordenesUnicas = [...new Set(todasLasOrdenes)]; // Eliminar duplicados
+    logger.info(`${logPrefix} ✅ Total de órdenes únicas a procesar: ${ordenesUnicas.length}`);
+
+    if (ordenesUnicas.length === 0) {
+      logger.info(`${logPrefix} No hay órdenes para procesar. Finalizando.`);
+      res.status(200).send("OK: No hay órdenes válidas para procesar.");
+      return;
+    }
+
+    // =================================================================
+    // FASE 4: PROCESAMIENTO DE WEBHOOKS
+    // =================================================================
+    logger.info(`${logPrefix} FASE 4: Iniciando procesamiento de webhooks...`);
+    
+    let webhooksCreados = 0;
+    let webhooksExistentes = 0;
+    let errores = 0;
+
+    for (let i = 0; i < ordenesUnicas.length; i++) {
+      const orderId = ordenesUnicas[i];
+      const progreso = `[${i + 1}/${ordenesUnicas.length}]`;
+      
+      logger.info(`${logPrefix} ${progreso} Procesando order ${orderId}...`);
+      
+      try {
+        // Verificar si ya existe el webhook
+        const existe = await verificarWebhookExistente(orderId, traceId);
+        
+        if (existe) {
+          webhooksExistentes++;
+          logger.info(`${logPrefix} ${progreso} ⏭️ Order ${orderId}: Webhook ya existe`);
+        } else {
+          // Crear webhook simulado
+          await crearWebhookSimulado(orderId, traceId);
+          webhooksCreados++;
+          logger.info(`${logPrefix} ${progreso} ✅ Order ${orderId}: Webhook creado`);
+        }
+        
+        // Esperar 500ms antes de procesar el siguiente (solo si no es el último)
+        if (i < ordenesUnicas.length - 1) {
+          await esperarMs(500);
+        }
+        
+      } catch (error) {
+        errores++;
+        const err = error as Error;
+        logger.error(`${logPrefix} ${progreso} ❌ Error procesando order ${orderId}`, {
+          error: err.message,
+        });
+        // Continuar con la siguiente orden
+      }
+    }
+
+    // =================================================================
+    // FASE 5: RESUMEN Y FINALIZACIÓN
+    // =================================================================
+    logger.info(`${logPrefix} ========================================`);
+    logger.info(`${logPrefix} RESUMEN DE EJECUCIÓN`);
+    logger.info(`${logPrefix} ========================================`);
+    logger.info(`${logPrefix} Webhooks creados: ${webhooksCreados}`);
+    logger.info(`${logPrefix} Webhooks existentes (saltados): ${webhooksExistentes}`);
+    logger.info(`${logPrefix} Errores: ${errores}`);
+    logger.info(`${logPrefix} Total procesado: ${ordenesUnicas.length}`);
+    logger.info(`${logPrefix} ========================================`);
+
+    res.status(200).send("OK");
+
+  } catch (error) {
+    const err = error as Error;
+    logger.error(`${logPrefix} ❌ Error crítico en simulación de webhooks`, {
+      error: err.message,
+      stack: err.stack,
+    });
+    res.status(500).send("Error interno del servidor.");
+  }
+});

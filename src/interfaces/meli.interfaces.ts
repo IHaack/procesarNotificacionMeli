@@ -201,6 +201,7 @@ export interface MeliShipmentPayload {
   logistic_type?: string;
   tracking_number?: string | null;
   tracking_method?: string | null;
+  external_reference?: string | null; // ← Pack ID asociado al shipment
   receiver_address?: {
     city?: { name?: string };
     state?: { name?: string };
@@ -251,10 +252,24 @@ export interface MeliBillingInfoPayload {
 
 export interface MeliPackOrder {
   id: number;
+  static_tags?: string[];
 }
 
 export interface MeliPackPayload {
+  id: number;
+  shipment?: {
+    id: number;
+  };
   orders: MeliPackOrder[];
+  status?: string;
+  status_detail?: string | null;
+  family_pack_id?: number | null;
+  trash_pack_id?: number | null;
+  buyer?: {
+    id: number;
+  };
+  date_created?: string;
+  last_updated?: string;
 }
 
 /**

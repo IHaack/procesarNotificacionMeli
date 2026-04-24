@@ -142,8 +142,8 @@ export async function procesarConsolidacionDeEnvio(shipmentId: string, traceId: 
       const shipmentDetails = await fetchShipmentDetails(Number(shipmentId), traceId);
       logger.info(`${logPrefix} ✅ Detalles del shipment obtenidos desde MELI.`);
       if (shipmentDetails) {
-        // acceso defensivo por si la interfaz no define pack_id exactamente
-        const possiblePack = (shipmentDetails as any).pack_id || (shipmentDetails as any).packId || (shipmentDetails as any).pack;
+        // El pack_id está en external_reference según la nueva arquitectura
+        const possiblePack = shipmentDetails.external_reference || (shipmentDetails as any).pack_id || (shipmentDetails as any).packId;
         
         if (possiblePack) {
           // Caso 1: Shipment con pack_id (múltiples orders)
@@ -824,8 +824,9 @@ async function processShipmentTopic(notification: MeliNotification, traceId: str
   const packId = meliShipment.external_reference;
   
   if (!packId) {
-    logger.warn(`${logPrefix} ⚠️ El shipment NO tiene external_reference (pack_id). No se puede procesar.`);
-    logger.warn(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
+    logger.error(`${logPrefix} ❌ CASO INESPERADO: Shipment sin external_reference. Esto no debería ocurrir según la arquitectura de MELI.`);
+    logger.error(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
+    logger.error(`${logPrefix} Este shipment será ignorado. Requiere revisión manual.`);
     return;
   }
 

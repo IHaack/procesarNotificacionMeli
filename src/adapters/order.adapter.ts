@@ -11,6 +11,7 @@ import {
   MeliOrderPayload,
   MeliShipmentPayload,
   MeliBillingInfo,
+  MeliBillingInfoPayload,
 } from "../interfaces/meli.interfaces";
 import {
   PedidosBSDocument,
@@ -20,6 +21,7 @@ import {
 } from "../interfaces/pedidos.interfaces";
 import { ContextoPedido } from "../interfaces/bsale.interfaces";
 import { HorasDeCorte } from "../services/config.services";
+import { extractBillingInfo } from "./db.adapter";
 
 /**
  * Interfaz interna para manejar los productos durante el pipeline de transformación.
@@ -281,7 +283,7 @@ export function determinarTipoML(logisticType?: string): string {
 export function adaptarPedidoMeli(
   meliOrder: MeliOrderPayload,
   meliShipment: MeliShipmentPayload,
-  meliBillingInfo: MeliBillingInfo | null,
+  meliBillingInfo: MeliBillingInfoPayload | MeliBillingInfo | null | any,
   contexto: ContextoPedido,
   horasDeCorte: HorasDeCorte,
   traceId: string
@@ -290,9 +292,11 @@ export function adaptarPedidoMeli(
   logger.info(`${logPrefix} Iniciando adaptación para el pedido de MELI ID: ${meliOrder.id}`);
 
   try {
+    const infoFacturacion = extractBillingInfo(meliBillingInfo);
+
     let codigoClienteFinal: string;
-    if (meliBillingInfo && meliBillingInfo.doc_number && meliBillingInfo.doc_number !== "No posee rut") {
-      codigoClienteFinal = formatarRutChileno(meliBillingInfo.doc_number);
+    if (infoFacturacion && infoFacturacion.doc_number && infoFacturacion.doc_number !== "No posee rut") {
+      codigoClienteFinal = formatarRutChileno(infoFacturacion.doc_number);
       logger.info(`${logPrefix} CodigoCliente determinado: RUT ${codigoClienteFinal}`);
     } else {
       codigoClienteFinal = meliOrder.buyer.id.toString();

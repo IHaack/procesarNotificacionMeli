@@ -45,7 +45,53 @@ npx ts-node scripts/validar-reprocesamiento.ts
 
 ---
 
-### 2. **recuperar-pedidos-huerfanos.ts** - Recuperación de Pedidos
+### 2. **test-shipment-flow.ts** - Testing de Flujo Completo
+Ejecuta el flujo completo de procesamiento de un shipment mostrando todos los pasos y respuestas.
+
+**Qué hace:**
+- ✅ Consulta el shipment desde MELI
+- ✅ Extrae pack_id o order_id
+- ✅ Intenta consultar pack details
+- ✅ Procesa cada orden del pack
+- ✅ Muestra todas las respuestas de MELI paso a paso
+- ✅ Detecta y explica errores comunes (como usar order_id en lugar de pack_id)
+
+**Uso:**
+```bash
+cd functions
+# Editar el script y cambiar SHIPMENT_ID_TO_TEST
+npx ts-node scripts/test-shipment-flow.ts
+```
+
+**Cuándo ejecutar:**
+- Para debuggear un shipment específico que está fallando
+- Para entender qué responde MELI en cada paso
+- Para validar que el flujo está funcionando correctamente
+- Antes de hacer cambios que afecten el procesamiento
+
+**Output esperado:**
+```
+================================================================================
+  PASO 1: Obtener detalles del shipment desde MELI
+================================================================================
+
+📡 Consultando shipment ID: 46915311421
+
+✅ Shipment obtenido exitosamente
+
+📦 Datos del shipment:
+{
+  "id": 46915311421,
+  "status": "ready_to_ship",
+  "logistic_type": "fulfillment",
+  "external_reference": "PACK_123456",
+  ...
+}
+```
+
+---
+
+### 3. **recuperar-pedidos-huerfanos.ts** - Recuperación de Pedidos
 Encuentra y recupera pedidos marcados como "cargado" que no existen en PedidosBS.
 
 **Qué hace:**

@@ -192,15 +192,64 @@ export interface MeliNotification {
 
 /**
  * @interface MeliShipmentPayload
- * @description Define la estructura del payload completo de un envío de MELI.
+ * @description Define la estructura del payload completo de un envío de MELI (formato nuevo con x-format-new: true).
  */
 export interface MeliShipmentPayload {
   id: number;
   status: string;
   substatus?: string | null;
-  logistic_type?: string;
   tracking_number?: string | null;
   tracking_method?: string | null;
+  external_reference?: string | null; // ← Pack ID asociado al shipment
+  date_created?: string;
+  last_updated?: string;
+  declared_value?: number;
+  tags?: string[];
+  logistic?: {
+    mode?: string;
+    type?: string;
+    direction?: string;
+  };
+  lead_time?: {
+    processing_time?: number | null;
+    cost?: number;
+    cost_type?: string;
+    list_cost?: number;
+    delivery_promise?: string;
+    delivery_type?: string;
+    service_id?: number;
+    option_id?: number;
+    currency_id?: string;
+    estimated_delivery_time?: {
+      date?: string;
+      pay_before?: string;
+      shipping?: number;
+      handling?: number;
+      unit?: string;
+      type?: string;
+    };
+    estimated_delivery_limit?: {
+      date?: string | null;
+    };
+    estimated_delivery_final?: {
+      date?: string | null;
+    };
+    estimated_delivery_extended?: {
+      date?: string | null;
+    };
+    shipping_method?: {
+      id?: number;
+      name?: string;
+      type?: string;
+      deliver_to?: string;
+    };
+  };
+  dimensions?: {
+    height?: number;
+    width?: number;
+    length?: number;
+    weight?: number;
+  };
   receiver_address?: {
     city?: { name?: string };
     state?: { name?: string };
@@ -251,10 +300,24 @@ export interface MeliBillingInfoPayload {
 
 export interface MeliPackOrder {
   id: number;
+  static_tags?: string[];
 }
 
 export interface MeliPackPayload {
+  id: number;
+  shipment?: {
+    id: number;
+  };
   orders: MeliPackOrder[];
+  status?: string;
+  status_detail?: string | null;
+  family_pack_id?: number | null;
+  trash_pack_id?: number | null;
+  buyer?: {
+    id: number;
+  };
+  date_created?: string;
+  last_updated?: string;
 }
 
 /**

@@ -105,7 +105,9 @@ export const businessRules = {
   MELI_SHIPMENT_PROCESSABLE_STATES: [
     { status: "ready_to_ship" },
   ] as ProcessableState[],
-  ALLOWED_LOGISTIC_TYPES: ["Flex", "Colecta", "Full"], // Permite Flex, Colecta y Full (fulfillment)
+  // Solo se procesan cross_docking (Flex) y self_service (Colecta)
+  // fulfillment (Full) NO se procesa en este flujo
+  ALLOWED_LOGISTIC_TYPES: ["Flex", "Colecta"],
 };
 
 /**

@@ -135,7 +135,10 @@ export async function fetchShipmentDetails(
 
   try {
     const response = await axios.get<MeliShipmentPayload>(fullUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { 
+        Authorization: `Bearer ${accessToken}`,
+        'x-format-new': 'true'
+      },
     });
     logger.info(`${logPrefix} Detalles del envío ${shipmentId} obtenidos correctamente.`);
     return response.data;

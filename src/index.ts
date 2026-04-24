@@ -142,8 +142,8 @@ export async function procesarConsolidacionDeEnvio(shipmentId: string, traceId: 
       const shipmentDetails = await fetchShipmentDetails(Number(shipmentId), traceId);
       logger.info(`${logPrefix} ✅ Detalles del shipment obtenidos desde MELI.`);
       if (shipmentDetails) {
-        // acceso defensivo por si la interfaz no define pack_id exactamente
-        const possiblePack = (shipmentDetails as any).pack_id || (shipmentDetails as any).packId || (shipmentDetails as any).pack;
+        // El pack_id está en external_reference según la nueva arquitectura
+        const possiblePack = shipmentDetails.external_reference || (shipmentDetails as any).pack_id || (shipmentDetails as any).packId;
         
         if (possiblePack) {
           // Caso 1: Shipment con pack_id (múltiples orders)
@@ -433,8 +433,146 @@ export async function procesarConsolidacionDeEnvio(shipmentId: string, traceId: 
 }
 
 /**
+ * Procesa una orden individual obteniendo sus datos de MELI y guardándolos en la DB normalizada.
+ * Esta función es reutilizable tanto desde el trigger de shipments como desde el trigger de orders.
+ * 
+ * @param orderId - ID de la orden a procesar
+ * @param shipmentId - ID del shipment asociado a la orden
+ * @param packId - ID del pack (opcional, puede venir de la order o del shipment)
+ * @param traceId - ID de trazabilidad para logging
+ */
+async function processIndividualOrder(
+  orderId: number,
+  shipmentId: number,
+  packId: string | null,
+  traceId: string
+): Promise<void> {
+  const logPrefix = `[Trace: ${traceId}] [processIndividualOrder]`;
+  const resource = `/orders/${orderId}`;
+  
+  logger.info(`${logPrefix} Procesando orden individual: ${orderId}`);
+
+  // Obtener detalles de la orden
+  let meliOrder;
+  try {
+    meliOrder = await fetchOrderDetails(resource, traceId);
+  } catch (error) {
+    const err = error as Error;
+    const errorMsg = err.message;
+    
+    // Detectar si es un error 403 (sin permisos)
+    if (errorMsg.includes('HTTP 403')) {
+      logger.warn(`${logPrefix} ⚠️ ERROR DE PERMISOS: Orden ${orderId} no pertenece a la cuenta o sin acceso.`);
+      await db.collection(firestoreCollections.failedOrders).doc(orderId.toString()).set({
+        resource: resource,
+        error_type: 'permission_denied',
+        error_code: 403,
+        error_message: 'La orden no pertenece a la cuenta vinculada o no hay permisos de acceso',
+        meli_error_detail: errorMsg,
+        timestamp: Timestamp.now(),
+        trace_id: traceId,
+        shipment_id: shipmentId,
+        pack_id: packId,
+      }, { merge: true });
+      return;
+    }
+    
+    // Detectar si es un error 404 (orden no encontrada)
+    if (errorMsg.includes('HTTP 404')) {
+      logger.warn(`${logPrefix} ⚠️ ORDEN NO ENCONTRADA: Orden ${orderId} no existe en MELI.`);
+      await db.collection(firestoreCollections.failedOrders).doc(orderId.toString()).set({
+        resource: resource,
+        error_type: 'not_found',
+        error_code: 404,
+        error_message: 'La orden no existe en MercadoLibre (cancelada, eliminada o datos inconsistentes)',
+        meli_error_detail: errorMsg,
+        timestamp: Timestamp.now(),
+        trace_id: traceId,
+        shipment_id: shipmentId,
+        pack_id: packId,
+      }, { merge: true });
+      return;
+    }
+    
+    // Para otros errores (500, timeout, etc.), propagar el error
+    throw error;
+  }
+  
+  logger.info(`${logPrefix} ✅ Orden obtenida. ID: ${meliOrder.id}, Status: ${meliOrder.status}`);
+
+  // Validar estado de la orden
+  if (meliOrder.status !== 'paid') {
+    logger.warn(`${logPrefix} La orden no está pagada (status: ${meliOrder.status}). Saltando.`);
+    return;
+  }
+
+  // Obtener billing info
+  const siteId = meliOrder.context?.site || meliOrder.payments?.[0]?.site_id;
+  const billingInfoId = meliOrder.buyer?.billing_info?.id;
+  
+  logger.info(`${logPrefix} 📡 Obteniendo billing info (opcional)...`);
+  let meliBillingInfo = null;
+  try {
+    const meliBillingInfoPayload = await fetchBillingInfo(siteId, billingInfoId, traceId);
+    meliBillingInfo = meliBillingInfoPayload.billing_info;
+    logger.info(`${logPrefix} ✅ Billing info obtenida.`);
+  } catch (error) {
+    logger.warn(`${logPrefix} ⚠️ No se pudo obtener billing info: ${(error as Error).message}`);
+  }
+
+  // Obtener shipment details
+  logger.info(`${logPrefix} 📡 Obteniendo shipment ${shipmentId}...`);
+  const meliShipment = await fetchShipmentDetails(shipmentId, traceId);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic?.type}`);
+  
+  // Validar tipo logístico
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
+  if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
+    logger.info(
+      `${logPrefix} Orden omitida. Tipo logístico '${meliShipment.logistic?.type}' (${tipoDePedido}) no permitido.`
+    );
+    return;
+  }
+
+  // Mapear datos a entidades de DB
+  logger.info(`${logPrefix} 🔄 Mapeando datos a entidades de DB...`);
+  const dbOrder = mapToDbOrder(meliOrder, meliBillingInfo, traceId);
+  const dbOrderItems = mapToDbOrderItems(meliOrder, traceId);
+  const dbShipment = mapToDbShipment(meliShipment, meliOrder.id, packId, traceId);
+  
+  logger.info(`${logPrefix} ✅ Datos mapeados: 1 order, ${dbOrderItems.length} items, 1 shipment`);
+
+  // Guardar en DB con transacción
+  logger.info(`${logPrefix} 💾 Guardando en DB normalizada...`);
+  try {
+    await db.runTransaction(async (transaction) => {
+      const orderRef = db.collection(firestoreCollections.orders).doc(dbOrder.id.toString());
+      const shipmentRef = db.collection(firestoreCollections.shipments).doc(dbShipment.id.toString());
+      
+      transaction.set(orderRef, dbOrder);
+      transaction.set(shipmentRef, dbShipment);
+      
+      dbOrderItems.forEach((item) => {
+        const itemRef = db.collection(firestoreCollections.orderItems).doc();
+        transaction.set(itemRef, item);
+      });
+    });
+    logger.info(`${logPrefix} ✅ Orden ${orderId} guardada exitosamente en DB.`);
+  } catch (transactionError) {
+    const txErr = transactionError as Error;
+    logger.error(`${logPrefix} ❌ ERROR EN TRANSACCIÓN: ${txErr.message}`);
+    throw txErr;
+  }
+}
+
+/**
+ * DESACTIVADA TEMPORALMENTE - Esta función ya no se usa en el flujo actual.
+ * Ahora las órdenes se procesan directamente desde processShipmentTopic() consultando el pack.
+ * Se mantiene el código para referencia o reactivación futura.
+ * 
  * Procesa un evento del tópico 'orders_v2' para guardar los datos en la DB normalizada.
  */
+// @ts-ignore - Función desactivada temporalmente pero mantenida para referencia
 async function processOrderTopic(notification: MeliNotification, traceId: string): Promise<void> {
   const { resource } = notification;
   const logPrefix = `[Trace: ${traceId}] [processOrderTopic]`;
@@ -513,7 +651,7 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   logger.info(`${logPrefix} 📡 PASO 2: Obteniendo shipment. Shipment ID: ${meliOrder.shipping.id}`);
 
   const meliShipment = await fetchShipmentDetails(meliOrder.shipping.id, traceId);
-  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic_type}`);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic?.type}`);
   
   logger.info(`${logPrefix} 📡 PASO 3: Obteniendo billing info (opcional)...`);
   let meliBillingInfo = null;
@@ -530,12 +668,12 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   // ==================================================================
 
   // El filtro se aplica aquí, usando la información del 'meliShipment' ya obtenido.
-  const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
 
   // El filtro ahora usa el valor traducido ("Flex", "Colecta").
   if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
     logger.info(
-      `${logPrefix} Orden omitida. El tipo logístico '${meliShipment.logistic_type}' (traducido como '${tipoDePedido}') no está en la lista de permitidos.`
+      `${logPrefix} Orden omitida. El tipo logístico '${meliShipment.logistic?.type}' (traducido como '${tipoDePedido}') no está en la lista de permitidos.`
     );
     return; // Detiene el procesamiento para esta orden.
   }
@@ -649,7 +787,185 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
 }
 
 /**
- * Procesa un evento del tópico 'shipments' para actualizar su estado y gatillar la consolidación.
+ * Procesa un shipment completo desde MELI:
+ * 1. Obtener detalles del shipment desde MELI
+ * 2. Extraer pack_id desde external_reference (o order_id si es orden individual)
+ * 3. Consultar pack en MELI para obtener lista de órdenes
+ * 4. Procesar cada orden individualmente (guardar en Orders/OrderItems/Shipments)
+ * 5. Actualizar estado del shipment en DB
+ * 6. Consolidar y guardar en PedidosBS si el estado es procesable
+ * 
+ * Esta función es reutilizable tanto desde el webhook de shipments como desde el reprocesador.
+ * 
+ * @param shipmentId - ID del shipment a procesar
+ * @param traceId - ID de trazabilidad para logging
+ * @returns Promise que se resuelve cuando el procesamiento termina
+ */
+async function procesarShipmentCompleto(shipmentId: string, traceId: string): Promise<void> {
+  const logPrefix = `[Trace: ${traceId}] [procesarShipmentCompleto]`;
+  logger.info(`${logPrefix} 🚀 Iniciado para shipment: ${shipmentId}`);
+
+  // ====================================================================
+  // PASO 1: Obtener detalles del shipment
+  // ====================================================================
+  logger.info(`${logPrefix} 📡 PASO 1: Obteniendo detalles del shipment desde MELI...`);
+  const meliShipment = await fetchShipmentDetails(Number(shipmentId), traceId);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Status: ${meliShipment.status}, Logistic Type: ${meliShipment.logistic?.type}`);
+
+  // Validar tipo logístico
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
+  if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
+    logger.info(
+      `${logPrefix} ⏭️ Shipment omitido. Tipo logístico '${meliShipment.logistic?.type}' (${tipoDePedido}) no permitido.`
+    );
+    return;
+  }
+
+  // ====================================================================
+  // PASO 2: Extraer pack_id desde external_reference o detectar order individual
+  // ====================================================================
+  // NOTA: external_reference contiene el pack_id para shipments con múltiples órdenes.
+  // Para órdenes individuales, puede no estar presente y debemos usar order_id.
+  let packId = meliShipment.external_reference;
+  
+  if (!packId) {
+    // Intentar detectar si es un shipment de orden individual
+    const orderId = (meliShipment as any).order_id;
+    
+    if (orderId) {
+      logger.info(`${logPrefix} 📦 Shipment sin pack_id detectado. Es una orden individual.`);
+      logger.info(`${logPrefix} Order ID: ${orderId}. Se procesará como pack de 1 orden.`);
+      packId = String(orderId);
+    } else {
+      // TODO: Según diagnóstico, este caso debería ser extremadamente raro.
+      // Si ocurre con frecuencia, revisar la arquitectura de MELI o nuestra lógica.
+      logger.error(`${logPrefix} ❌ ADVERTENCIA CRÍTICA: Shipment sin external_reference ni order_id.`);
+      logger.error(`${logPrefix} Esto indica un problema con los datos de MELI o una orden en estado inválido.`);
+      logger.error(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
+      logger.error(`${logPrefix} Este shipment será ignorado. Requiere revisión manual urgente.`);
+      
+      // Registrar en reviewQueue para análisis
+      await db.collection(firestoreCollections.reviewQueue).doc(shipmentId).set({
+        id: shipmentId,
+        shipmentId: shipmentId,
+        meli_pack_id: '',
+        mensaje: 'Shipment sin external_reference ni order_id - datos incompletos desde MELI',
+        estado_de_carga: "sin carga",
+        ordenesEsperadas: [],
+        ordenesEncontradas: [],
+        payload_meli_pack: JSON.stringify(meliShipment, null, 2),
+        ultimoIntento: Timestamp.now(),
+      }, { merge: true });
+      
+      return;
+    }
+  }
+
+  logger.info(`${logPrefix} ✅ Pack ID obtenido: ${packId}`);
+
+  // ====================================================================
+  // PASO 3: Obtener órdenes del pack desde la API de MELI
+  // ====================================================================
+  logger.info(`${logPrefix} 📡 PASO 2: Consultando pack ${packId} para obtener órdenes...`);
+  let packDetails;
+  try {
+    packDetails = await fetchPackDetails(packId, traceId);
+    logger.info(`${logPrefix} ✅ Pack obtenido. Contiene ${packDetails.orders.length} orden(es).`);
+  } catch (error) {
+    const err = error as Error;
+    logger.error(`${logPrefix} ❌ Error al obtener detalles del pack: ${err.message}`);
+    throw error;
+  }
+
+  // ====================================================================
+  // PASO 4: Procesar cada orden del pack
+  // ====================================================================
+  logger.info(`${logPrefix} 🔄 PASO 3: Procesando ${packDetails.orders.length} órdenes del pack...`);
+  
+  const orderProcessingResults: { orderId: number; success: boolean; error?: string }[] = [];
+  
+  for (const order of packDetails.orders) {
+    const orderId = order.id;
+    logger.info(`${logPrefix} 📦 Procesando orden ${orderId}...`);
+    
+    try {
+      await processIndividualOrder(orderId, Number(shipmentId), packId, traceId);
+      orderProcessingResults.push({ orderId, success: true });
+      logger.info(`${logPrefix} ✅ Orden ${orderId} procesada exitosamente.`);
+    } catch (error) {
+      const err = error as Error;
+      logger.error(`${logPrefix} ❌ Error procesando orden ${orderId}: ${err.message}`);
+      orderProcessingResults.push({ orderId, success: false, error: err.message });
+      // Continuamos con las demás órdenes en lugar de fallar todo el proceso
+    }
+  }
+
+  // Resumen de procesamiento
+  const successCount = orderProcessingResults.filter(r => r.success).length;
+  const failedCount = orderProcessingResults.filter(r => !r.success).length;
+  
+  logger.info(`${logPrefix} 📊 Resumen de procesamiento de órdenes:`);
+  logger.info(`${logPrefix}    ✅ Exitosas: ${successCount}/${packDetails.orders.length}`);
+  logger.info(`${logPrefix}    ❌ Fallidas: ${failedCount}/${packDetails.orders.length}`);
+  
+  if (failedCount > 0) {
+    const failedOrders = orderProcessingResults.filter(r => !r.success);
+    logger.warn(`${logPrefix} ⚠️ Órdenes fallidas: ${failedOrders.map(r => `${r.orderId} (${r.error})`).join(', ')}`);
+  }
+
+  // ====================================================================
+  // PASO 5: Actualizar estado del shipment en DB
+  // ====================================================================
+  logger.info(`${logPrefix} 💾 PASO 4: Actualizando estado del shipment en DB...`);
+  const shipmentRef = db.collection(firestoreCollections.shipments).doc(shipmentId);
+  await shipmentRef.set({
+    status: meliShipment.status,
+    substatus: meliShipment.substatus || null,
+    updated_at: Timestamp.now(),
+  }, { merge: true });
+  logger.info(`${logPrefix} ✅ Estado del shipment actualizado.`);
+
+  // ====================================================================
+  // PASO 6: Verificar si el estado es procesable para consolidación
+  // ====================================================================
+  logger.info(`${logPrefix} 🔍 PASO 5: Verificando si el estado es procesable...`);
+  
+  const esEstadoValido = businessRules.MELI_SHIPMENT_PROCESSABLE_STATES.some(
+    (validState) => {
+      const statusMatch = meliShipment.status === validState.status;
+      const substatusMatch = !validState.substatus || meliShipment.substatus === validState.substatus;
+      return statusMatch && substatusMatch;
+    }
+  );
+
+  if (esEstadoValido) {
+    logger.info(`${logPrefix} ✅ Estado válido (${meliShipment.status}). Disparando consolidación...`);
+    
+    // Solo disparar consolidación si al menos una orden se procesó exitosamente
+    if (successCount > 0) {
+      try {
+        await procesarConsolidacionDeEnvio(shipmentId, traceId);
+        logger.info(`${logPrefix} 🎉 Consolidación completada exitosamente!`);
+      } catch (error) {
+        const err = error as Error;
+        logger.error(`${logPrefix} ❌ Error en consolidación: ${err.message}`);
+        throw error;
+      }
+    } else {
+      logger.warn(`${logPrefix} ⚠️ No se disparó consolidación porque ninguna orden se procesó exitosamente.`);
+    }
+  } else {
+    logger.info(`${logPrefix} ℹ️ Estado (${meliShipment.status}) no requiere consolidación. Proceso finalizado.`);
+  }
+}
+
+/**
+ * Procesa un evento del tópico 'shipments' para procesar un shipment completo.
+ * Esta función es un wrapper que extrae el shipmentId del webhook y delega
+ * el procesamiento a procesarShipmentCompleto.
+ * 
+ * @param notification - Notificación de webhook de MELI
+ * @param traceId - ID de trazabilidad para logging
  */
 async function processShipmentTopic(notification: MeliNotification, traceId: string): Promise<void> {
   const { resource } = notification;
@@ -657,62 +973,10 @@ async function processShipmentTopic(notification: MeliNotification, traceId: str
   const shipmentId = resource.split("/").pop();
   if (!shipmentId) throw new Error(`${logPrefix} No se pudo extraer el ID del envío.`);
 
-  logger.info(`${logPrefix} Iniciado para recurso: ${resource}`);
-
-  logger.info(`${logPrefix} FASE 3 (Calculate): Obteniendo detalles del envío.`);
-  const meliShipment = await fetchShipmentDetails(Number(shipmentId), traceId);
-  const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
-
-  // 2. Aplica el filtro usando el valor traducido.
-  if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
-    logger.info(
-      `${logPrefix} Actualización de envío omitida. El tipo logístico '${meliShipment.logistic_type}' (traducido como '${tipoDePedido}') no está permitido.`
-    );
-    return; // Detiene la actualización para este tipo de envío.
-  }
-
-  logger.info(`${logPrefix} FASE 4 (Execute): Actualizando estado del envío en DB.`);
-  const shipmentRef = db.collection(firestoreCollections.shipments).doc(shipmentId);
-  await shipmentRef.set({
-    status: meliShipment.status,
-    substatus: meliShipment.substatus || null,
-    updated_at: Timestamp.now(),
-  }, { merge: true });
-
-  logger.info(`${logPrefix} Datos del envío para verificación de estado:`, {
-    status: meliShipment.status,
-    substatus: meliShipment.substatus,
-  });
-
-  logger.info(`${logPrefix} Verificando si el estado es procesable según la configuración.`);
-
-  // ESTA ES LA LÓGICA CORRECTA QUE USA 'businessRules'
-  const esEstadoValido = businessRules.MELI_SHIPMENT_PROCESSABLE_STATES.some(
-    (validState) => {
-      // FORZAMOS LA CONVERSIÓN A STRING PARA VER EL OBJETO EN EL LOG
-      logger.info(`${logPrefix} [Debug] ...verificando contra la regla: ${JSON.stringify(validState)}`);
-
-      // Esta lógica es correcta: compara el string de meliShipment.status
-      // con el string que está DENTRO de validState.status
-      const statusMatch = meliShipment.status === validState.status;
-      const substatusMatch = !validState.substatus || meliShipment.substatus === validState.substatus;
-
-      // Hacemos lo mismo aquí para ver los resultados booleanos
-      logger.info(`${logPrefix} [Debug] ...resultado de la comparación: ${JSON.stringify({
-        statusMatch,
-        substatusMatch,
-      })}`);
-
-      return statusMatch && substatusMatch;
-    }
-  );
-
-  if (esEstadoValido) {
-    logger.info(`${logPrefix} FASE 6 (Notify): Estado válido (${meliShipment.status}). Disparando consolidación.`);
-    await procesarConsolidacionDeEnvio(shipmentId, traceId);
-  } else {
-    logger.info(`${logPrefix} Estado (${meliShipment.status}) no requiere consolidación. Proceso finalizado.`);
-  }
+  logger.info(`${logPrefix} Webhook recibido para shipment: ${shipmentId}`);
+  
+  // Delegar el procesamiento completo a la función reutilizable
+  await procesarShipmentCompleto(shipmentId, traceId);
 }
 
 // =================================================================
@@ -759,10 +1023,12 @@ export const procesarNotificacionMeli = onDocumentCreated(
     try {
       logger.info(`${logPrefix} Delegando al handler para el tópico: ${notification.topic}`);
       switch (notification.topic) {
-        case "orders_v2":
-        case "orders":
-          await processOrderTopic(notification, notificationId);
-          break;
+        // DESACTIVADO TEMPORALMENTE: Ahora procesamos las órdenes desde el trigger de shipments
+        // consultando el pack_id y obteniendo todas las órdenes asociadas de forma proactiva.
+        // case "orders_v2":
+        // case "orders":
+        //   await processOrderTopic(notification, notificationId);
+        //   break;
         case "shipments":
           await processShipmentTopic(notification, notificationId);
           break;
@@ -832,7 +1098,46 @@ export const reprocesarEnviosInconsistentes = functions.https.onRequest(async (r
         try {
           logger.info(`${logPrefix} Intentando reprocesar Shipment ID: ${shipmentId}`);
 
-          await procesarConsolidacionDeEnvio(shipmentId, subTraceId);
+          // ✅ CORRECCIÓN: Ahora usa el flujo completo de procesamiento
+          // Esto replica exactamente lo que hace el webhook de shipments:
+          // 1. Obtener shipment desde MELI
+          // 2. Extraer pack_id
+          // 3. Consultar pack en MELI
+          // 4. Procesar cada orden (guardar en Orders/OrderItems/Shipments)
+          // 5. Consolidar (guardar en PedidosBS) SOLO si el estado es procesable
+          await procesarShipmentCompleto(shipmentId, subTraceId);
+
+          // --- PASO CRÍTICO: Verificar el estado del shipment ---
+          // Obtener el shipment desde nuestra DB (se actualizó en procesarShipmentCompleto)
+          const shipmentDoc = await db
+            .collection(firestoreCollections.shipments)
+            .doc(shipmentId)
+            .get();
+
+          if (!shipmentDoc.exists) {
+            logger.warn(
+              `${logPrefix} ⚠️ Shipment ${shipmentId} no existe en la DB después del procesamiento.`
+            );
+            await doc.ref.update({
+              estado_de_carga: "error",
+              ultimoIntento: Timestamp.now(),
+              ultimoError: "Shipment no encontrado en DB después del procesamiento",
+            });
+            return { shipmentId, status: "error", error: "Shipment no encontrado" };
+          }
+
+          const shipmentData = shipmentDoc.data();
+          const shipmentStatus = shipmentData?.status;
+          const shipmentSubstatus = shipmentData?.substatus;
+
+          // Verificar si el estado es procesable según las reglas de negocio
+          const esEstadoProcesable = businessRules.MELI_SHIPMENT_PROCESSABLE_STATES.some(
+            (validState) => {
+              const statusMatch = shipmentStatus === validState.status;
+              const substatusMatch = !validState.substatus || shipmentSubstatus === validState.substatus;
+              return statusMatch && substatusMatch;
+            }
+          );
 
           // --- VERIFICACIÓN CRÍTICA: ¿Se creó el pedido en PedidosBS? ---
           const pedidoDoc = await db
@@ -851,20 +1156,35 @@ export const reprocesarEnviosInconsistentes = functions.https.onRequest(async (r
               pedido_creado_en: firestoreCollections.processedOrders,
             });
             return { shipmentId, status: "success" };
-          } else {
-            // ⚠️ NO SE CONSOLIDÓ: No hay pedido final (probablemente faltan órdenes)
-            logger.warn(
-              `${logPrefix} ⚠️ Reprocesamiento de ${shipmentId} no creó pedido en ${firestoreCollections.processedOrders}. Posiblemente faltan órdenes en la DB.`
+          } else if (!esEstadoProcesable) {
+            // ℹ️ ESTADO NO PROCESABLE: El shipment no requiere consolidación
+            logger.info(
+              `${logPrefix} ℹ️ Shipment ${shipmentId} tiene estado no procesable (${shipmentStatus}). No requiere consolidación.`
             );
             await doc.ref.update({
-              estado_de_carga: "sin carga", // Mantener como pendiente para futuros reintentos
+              estado_de_carga: "estado_no_procesable",
               ultimoIntento: Timestamp.now(),
-              ultimoError: "No se pudo consolidar: Hay órdenes disponibles en la DB local",
+              ultimoError: `Estado ${shipmentStatus} no requiere consolidación`,
+            });
+            return {
+              shipmentId,
+              status: "skipped",
+              error: `Estado ${shipmentStatus} no procesable`,
+            };
+          } else {
+            // ⚠️ NO SE CONSOLIDÓ: Estado procesable pero sin pedido (faltan órdenes o error en consolidación)
+            logger.warn(
+              `${logPrefix} ⚠️ Shipment ${shipmentId} tiene estado procesable (${shipmentStatus}) pero no se creó pedido. Posiblemente faltan órdenes.`
+            );
+            await doc.ref.update({
+              estado_de_carga: "sin carga",
+              ultimoIntento: Timestamp.now(),
+              ultimoError: `Estado procesable (${shipmentStatus}) pero sin pedido consolidado`,
             });
             return {
               shipmentId,
               status: "pending",
-              error: "No hay órdenes para consolidar",
+              error: "Estado procesable pero sin pedido",
             };
           }
         } catch (error) {
@@ -1102,263 +1422,3 @@ export const notificarInconsistenciaPorEmail = onDocumentWritten(
     }
   }
 );
-
-// =================================================================
-// ============ SIMULACIÓN DE WEBHOOKS PARA INCONSISTENCIAS ========
-// =================================================================
-
-/**
- * Función auxiliar para crear un delay (espera) de forma asíncrona.
- * Útil para evitar sobrecargar el sistema al inyectar webhooks masivamente.
- * 
- * @param ms - Tiempo de espera en milisegundos
- * @returns Promise que se resuelve después del tiempo especificado
- */
-function esperarMs(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Verifica si ya existe un webhook para una orden específica.
- * 
- * @param orderId - ID de la orden a verificar
- * @param traceId - ID de trazabilidad para logging
- * @returns true si el webhook ya existe, false si no existe
- */
-async function verificarWebhookExistente(
-  orderId: string,
-  traceId: string
-): Promise<boolean> {
-  const logPrefix = `[Trace: ${traceId}] [verificarWebhookExistente]`;
-  const resource = `/orders/${orderId}`;
-  
-  try {
-    const snapshot = await db
-      .collection(firestoreCollections.meliNotifications)
-      .where("resource", "==", resource)
-      .limit(1)
-      .get();
-    
-    const existe = !snapshot.empty;
-    
-    if (existe) {
-      logger.info(`${logPrefix} Webhook ya existe para order ${orderId}. Saltando.`);
-    }
-    
-    return existe;
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} Error al verificar webhook existente para order ${orderId}`, {
-      error: err.message,
-    });
-    // En caso de error, asumir que no existe para continuar
-    return false;
-  }
-}
-
-/**
- * Crea un documento de webhook simulado en la colección webhookRecibidosMercadoLibre.
- * El documento se crea SIN el campo 'status' para que el trigger procesarNotificacionMeli
- * lo detecte y procese como una notificación nueva.
- * 
- * @param orderId - ID de la orden para la cual crear el webhook
- * @param traceId - ID de trazabilidad para logging
- * @returns Promise que se resuelve cuando se crea el documento
- */
-async function crearWebhookSimulado(
-  orderId: string,
-  traceId: string
-): Promise<void> {
-  const logPrefix = `[Trace: ${traceId}] [crearWebhookSimulado]`;
-  const resource = `/orders/${orderId}`;
-  const webhookId = uuidv4();
-  
-  const webhookData = {
-    application_id: 2221674115246629,
-    attempts: 1,
-    fechaHoraRecepcionEnFuncion: Timestamp.now(),
-    idWML: webhookId,
-    received: Timestamp.now(),
-    sent: Timestamp.now(),
-    resource: resource,
-    topic: "orders_v2",
-    user_id: 454112654,
-    // IMPORTANTE: NO incluir campo 'status' para que el trigger lo procese
-  };
-  
-  try {
-    await db
-      .collection(firestoreCollections.meliNotifications)
-      .doc(webhookId)
-      .set(webhookData);
-    
-    logger.info(`${logPrefix} ✅ Webhook simulado creado para order ${orderId}`, {
-      webhookId,
-      resource,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} ❌ Error al crear webhook simulado para order ${orderId}`, {
-      error: err.message,
-      stack: err.stack,
-    });
-    throw error;
-  }
-}
-
-/**
- * Cloud Function HTTP que simula la inyección de webhooks para órdenes pendientes.
- * 
- * **PROPÓSITO:**
- * Lee órdenes esperadas desde enviosConInconsistencias (estado "sin carga") y crea
- * webhooks simulados para disparar el procesamiento normal del pipeline.
- * 
- * **FLUJO:**
- * 1. Busca documentos en enviosConInconsistencias con estado_de_carga = "sin carga"
- * 2. Extrae ordenesEsperadas de cada documento
- * 3. Para cada order ID:
- *    a. Verifica si ya existe webhook en webhookRecibidosMercadoLibre
- *    b. Si NO existe, crea documento de webhook simulado
- *    c. Espera 500ms antes de procesar la siguiente
- * 
- * **SEGURIDAD:**
- * Requiere Bearer token en header Authorization (schedulerSecret)
- * 
- * **USO:**
- * curl --location 'https://[URL]/simularWebhooksParaInconsistencias' \
- *   --header 'Authorization: Bearer [SECRET]'
- */
-export const simularWebhooksParaInconsistencias = functions.https.onRequest(async (req, res) => {
-  const traceId = uuidv4();
-  const logPrefix = `[Trace: ${traceId}] [SimularWebhooks]`;
-
-  logger.info(`${logPrefix} ========================================`);
-  logger.info(`${logPrefix} INICIO: Simulación de webhooks para órdenes pendientes`);
-  logger.info(`${logPrefix} ========================================`);
-
-  // =================================================================
-  // FASE 1: VALIDACIÓN DE SEGURIDAD
-  // =================================================================
-  if (req.headers.authorization !== `Bearer ${securityConfig.schedulerSecret}`) {
-    logger.error(`${logPrefix} ❌ Error de autorización. Secreto inválido o ausente.`);
-    res.status(401).send("Unauthorized");
-    return;
-  }
-  
-  logger.info(`${logPrefix} ✅ FASE 1: Autenticación exitosa`);
-
-  try {
-    // =================================================================
-    // FASE 2: BÚSQUEDA DE DOCUMENTOS PENDIENTES
-    // =================================================================
-    logger.info(`${logPrefix} FASE 2: Buscando documentos con estado "sin carga"...`);
-    
-    const snapshot = await db
-      .collection(firestoreCollections.reviewQueue)
-      .where("estado_de_carga", "==", "sin carga")
-      .get();
-
-    if (snapshot.empty) {
-      logger.info(`${logPrefix} No se encontraron documentos pendientes. Finalizando.`);
-      res.status(200).send("OK: No hay órdenes pendientes para procesar.");
-      return;
-    }
-
-    logger.info(`${logPrefix} ✅ Encontrados ${snapshot.size} documento(s) con estado "sin carga"`);
-
-    // =================================================================
-    // FASE 3: EXTRACCIÓN DE ÓRDENES ESPERADAS
-    // =================================================================
-    logger.info(`${logPrefix} FASE 3: Extrayendo órdenes esperadas de cada documento...`);
-    
-    const todasLasOrdenes: string[] = [];
-    
-    for (const doc of snapshot.docs) {
-      const data = doc.data() as InconsistencyLog;
-      const ordenesEsperadas = data.ordenesEsperadas || [];
-      
-      for (const orden of ordenesEsperadas) {
-        if (orden.id) {
-          todasLasOrdenes.push(orden.id);
-        }
-      }
-      
-      logger.info(`${logPrefix} Documento ${doc.id}: ${ordenesEsperadas.length} orden(es) esperada(s)`);
-    }
-    
-    const ordenesUnicas = [...new Set(todasLasOrdenes)]; // Eliminar duplicados
-    logger.info(`${logPrefix} ✅ Total de órdenes únicas a procesar: ${ordenesUnicas.length}`);
-
-    if (ordenesUnicas.length === 0) {
-      logger.info(`${logPrefix} No hay órdenes para procesar. Finalizando.`);
-      res.status(200).send("OK: No hay órdenes válidas para procesar.");
-      return;
-    }
-
-    // =================================================================
-    // FASE 4: PROCESAMIENTO DE WEBHOOKS
-    // =================================================================
-    logger.info(`${logPrefix} FASE 4: Iniciando procesamiento de webhooks...`);
-    
-    let webhooksCreados = 0;
-    let webhooksExistentes = 0;
-    let errores = 0;
-
-    for (let i = 0; i < ordenesUnicas.length; i++) {
-      const orderId = ordenesUnicas[i];
-      const progreso = `[${i + 1}/${ordenesUnicas.length}]`;
-      
-      logger.info(`${logPrefix} ${progreso} Procesando order ${orderId}...`);
-      
-      try {
-        // Verificar si ya existe el webhook
-        const existe = await verificarWebhookExistente(orderId, traceId);
-        
-        if (existe) {
-          webhooksExistentes++;
-          logger.info(`${logPrefix} ${progreso} ⏭️ Order ${orderId}: Webhook ya existe`);
-        } else {
-          // Crear webhook simulado
-          await crearWebhookSimulado(orderId, traceId);
-          webhooksCreados++;
-          logger.info(`${logPrefix} ${progreso} ✅ Order ${orderId}: Webhook creado`);
-        }
-        
-        // Esperar 500ms antes de procesar el siguiente (solo si no es el último)
-        if (i < ordenesUnicas.length - 1) {
-          await esperarMs(500);
-        }
-        
-      } catch (error) {
-        errores++;
-        const err = error as Error;
-        logger.error(`${logPrefix} ${progreso} ❌ Error procesando order ${orderId}`, {
-          error: err.message,
-        });
-        // Continuar con la siguiente orden
-      }
-    }
-
-    // =================================================================
-    // FASE 5: RESUMEN Y FINALIZACIÓN
-    // =================================================================
-    logger.info(`${logPrefix} ========================================`);
-    logger.info(`${logPrefix} RESUMEN DE EJECUCIÓN`);
-    logger.info(`${logPrefix} ========================================`);
-    logger.info(`${logPrefix} Webhooks creados: ${webhooksCreados}`);
-    logger.info(`${logPrefix} Webhooks existentes (saltados): ${webhooksExistentes}`);
-    logger.info(`${logPrefix} Errores: ${errores}`);
-    logger.info(`${logPrefix} Total procesado: ${ordenesUnicas.length}`);
-    logger.info(`${logPrefix} ========================================`);
-
-    res.status(200).send("OK");
-
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} ❌ Error crítico en simulación de webhooks`, {
-      error: err.message,
-      stack: err.stack,
-    });
-    res.status(500).send("Error interno del servidor.");
-  }
-});

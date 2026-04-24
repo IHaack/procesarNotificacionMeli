@@ -260,10 +260,10 @@ export function consolidarProductos(
  */
 export function determinarTipoML(logisticType?: string): string {
   switch (logisticType) {
-    case "self_service":
-      return "Flex";
     case "cross_docking":
       return "Colecta";
+    case "self_service":
+      return "Flex";
     case "fulfillment":
       return "Full";
     default:
@@ -348,7 +348,7 @@ export function adaptarPedidoMeli(
       0
     );
 
-    const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
+    const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
     const fechaPedidoOriginalJS = new Date(meliOrder.date_closed);
     const fechaCargadoCalculadaJS = calcularFechaCargado(
       fechaPedidoOriginalJS,

@@ -144,7 +144,7 @@ export function mapToDbShipment(
       meli_pack_id: packId ?? "",
       status: meliShipment.status,
       substatus: meliShipment.substatus || null,
-      logistic_type: meliShipment.logistic_type || "N/A",
+      logistic_type: meliShipment.logistic?.type || "N/A",
       tracking_number: meliShipment.tracking_number || null,
       tracking_method: meliShipment.tracking_method || null,
       shipping_cost: 0,

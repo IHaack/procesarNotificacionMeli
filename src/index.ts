@@ -523,13 +523,13 @@ async function processIndividualOrder(
   // Obtener shipment details
   logger.info(`${logPrefix} 📡 Obteniendo shipment ${shipmentId}...`);
   const meliShipment = await fetchShipmentDetails(shipmentId, traceId);
-  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic_type}`);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic?.type}`);
   
   // Validar tipo logístico
-  const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
   if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
     logger.info(
-      `${logPrefix} Orden omitida. Tipo logístico '${meliShipment.logistic_type}' (${tipoDePedido}) no permitido.`
+      `${logPrefix} Orden omitida. Tipo logístico '${meliShipment.logistic?.type}' (${tipoDePedido}) no permitido.`
     );
     return;
   }
@@ -651,7 +651,7 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   logger.info(`${logPrefix} 📡 PASO 2: Obteniendo shipment. Shipment ID: ${meliOrder.shipping.id}`);
 
   const meliShipment = await fetchShipmentDetails(meliOrder.shipping.id, traceId);
-  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic_type}`);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Logistic Type: ${meliShipment.logistic?.type}`);
   
   logger.info(`${logPrefix} 📡 PASO 3: Obteniendo billing info (opcional)...`);
   let meliBillingInfo = null;
@@ -668,12 +668,12 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
   // ==================================================================
 
   // El filtro se aplica aquí, usando la información del 'meliShipment' ya obtenido.
-  const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
 
   // El filtro ahora usa el valor traducido ("Flex", "Colecta").
   if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
     logger.info(
-      `${logPrefix} Orden omitida. El tipo logístico '${meliShipment.logistic_type}' (traducido como '${tipoDePedido}') no está en la lista de permitidos.`
+      `${logPrefix} Orden omitida. El tipo logístico '${meliShipment.logistic?.type}' (traducido como '${tipoDePedido}') no está en la lista de permitidos.`
     );
     return; // Detiene el procesamiento para esta orden.
   }
@@ -787,19 +787,22 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
 }
 
 /**
- * Procesa un evento del tópico 'shipments' para:
- * 1. Obtener el pack_id desde el shipment (campo external_reference)
- * 2. Obtener todas las órdenes del pack desde la API de MELI
- * 3. Procesar cada orden individualmente
- * 4. Actualizar estado del shipment
- * 5. Disparar consolidación si el estado es procesable
+ * Procesa un shipment completo desde MELI:
+ * 1. Obtener detalles del shipment desde MELI
+ * 2. Extraer pack_id desde external_reference (o order_id si es orden individual)
+ * 3. Consultar pack en MELI para obtener lista de órdenes
+ * 4. Procesar cada orden individualmente (guardar en Orders/OrderItems/Shipments)
+ * 5. Actualizar estado del shipment en DB
+ * 6. Consolidar y guardar en PedidosBS si el estado es procesable
+ * 
+ * Esta función es reutilizable tanto desde el webhook de shipments como desde el reprocesador.
+ * 
+ * @param shipmentId - ID del shipment a procesar
+ * @param traceId - ID de trazabilidad para logging
+ * @returns Promise que se resuelve cuando el procesamiento termina
  */
-async function processShipmentTopic(notification: MeliNotification, traceId: string): Promise<void> {
-  const { resource } = notification;
-  const logPrefix = `[Trace: ${traceId}] [processShipmentTopic]`;
-  const shipmentId = resource.split("/").pop();
-  if (!shipmentId) throw new Error(`${logPrefix} No se pudo extraer el ID del envío.`);
-
+async function procesarShipmentCompleto(shipmentId: string, traceId: string): Promise<void> {
+  const logPrefix = `[Trace: ${traceId}] [procesarShipmentCompleto]`;
   logger.info(`${logPrefix} 🚀 Iniciado para shipment: ${shipmentId}`);
 
   // ====================================================================
@@ -807,30 +810,58 @@ async function processShipmentTopic(notification: MeliNotification, traceId: str
   // ====================================================================
   logger.info(`${logPrefix} 📡 PASO 1: Obteniendo detalles del shipment desde MELI...`);
   const meliShipment = await fetchShipmentDetails(Number(shipmentId), traceId);
-  logger.info(`${logPrefix} ✅ Shipment obtenido. Status: ${meliShipment.status}, Logistic Type: ${meliShipment.logistic_type}`);
+  logger.info(`${logPrefix} ✅ Shipment obtenido. Status: ${meliShipment.status}, Logistic Type: ${meliShipment.logistic?.type}`);
 
   // Validar tipo logístico
-  const tipoDePedido = determinarTipoML(meliShipment.logistic_type);
+  const tipoDePedido = determinarTipoML(meliShipment.logistic?.type);
   if (!businessRules.ALLOWED_LOGISTIC_TYPES.includes(tipoDePedido)) {
     logger.info(
-      `${logPrefix} ⏭️ Shipment omitido. Tipo logístico '${meliShipment.logistic_type}' (${tipoDePedido}) no permitido.`
+      `${logPrefix} ⏭️ Shipment omitido. Tipo logístico '${meliShipment.logistic?.type}' (${tipoDePedido}) no permitido.`
     );
     return;
   }
 
   // ====================================================================
-  // PASO 2: Extraer pack_id desde external_reference
+  // PASO 2: Extraer pack_id desde external_reference o detectar order individual
   // ====================================================================
-  const packId = meliShipment.external_reference;
+  // NOTA: external_reference contiene el pack_id para shipments con múltiples órdenes.
+  // Para órdenes individuales, puede no estar presente y debemos usar order_id.
+  let packId = meliShipment.external_reference;
   
   if (!packId) {
-    logger.error(`${logPrefix} ❌ CASO INESPERADO: Shipment sin external_reference. Esto no debería ocurrir según la arquitectura de MELI.`);
-    logger.error(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
-    logger.error(`${logPrefix} Este shipment será ignorado. Requiere revisión manual.`);
-    return;
+    // Intentar detectar si es un shipment de orden individual
+    const orderId = (meliShipment as any).order_id;
+    
+    if (orderId) {
+      logger.info(`${logPrefix} 📦 Shipment sin pack_id detectado. Es una orden individual.`);
+      logger.info(`${logPrefix} Order ID: ${orderId}. Se procesará como pack de 1 orden.`);
+      packId = String(orderId);
+    } else {
+      // TODO: Según diagnóstico, este caso debería ser extremadamente raro.
+      // Si ocurre con frecuencia, revisar la arquitectura de MELI o nuestra lógica.
+      logger.error(`${logPrefix} ❌ ADVERTENCIA CRÍTICA: Shipment sin external_reference ni order_id.`);
+      logger.error(`${logPrefix} Esto indica un problema con los datos de MELI o una orden en estado inválido.`);
+      logger.error(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
+      logger.error(`${logPrefix} Este shipment será ignorado. Requiere revisión manual urgente.`);
+      
+      // Registrar en reviewQueue para análisis
+      await db.collection(firestoreCollections.reviewQueue).doc(shipmentId).set({
+        id: shipmentId,
+        shipmentId: shipmentId,
+        meli_pack_id: '',
+        mensaje: 'Shipment sin external_reference ni order_id - datos incompletos desde MELI',
+        estado_de_carga: "sin carga",
+        ordenesEsperadas: [],
+        ordenesEncontradas: [],
+        payload_meli_pack: JSON.stringify(meliShipment, null, 2),
+        ultimoIntento: Timestamp.now(),
+      }, { merge: true });
+      
+      return;
+    }
   }
 
-  logger.info(`${logPrefix} ✅ Pack ID obtenido desde external_reference: ${packId}`);
+  logger.info(`${logPrefix} ✅ Pack ID obtenido: ${packId}`);
 
   // ====================================================================
   // PASO 3: Obtener órdenes del pack desde la API de MELI
@@ -926,6 +957,26 @@ async function processShipmentTopic(notification: MeliNotification, traceId: str
   } else {
     logger.info(`${logPrefix} ℹ️ Estado (${meliShipment.status}) no requiere consolidación. Proceso finalizado.`);
   }
+}
+
+/**
+ * Procesa un evento del tópico 'shipments' para procesar un shipment completo.
+ * Esta función es un wrapper que extrae el shipmentId del webhook y delega
+ * el procesamiento a procesarShipmentCompleto.
+ * 
+ * @param notification - Notificación de webhook de MELI
+ * @param traceId - ID de trazabilidad para logging
+ */
+async function processShipmentTopic(notification: MeliNotification, traceId: string): Promise<void> {
+  const { resource } = notification;
+  const logPrefix = `[Trace: ${traceId}] [processShipmentTopic]`;
+  const shipmentId = resource.split("/").pop();
+  if (!shipmentId) throw new Error(`${logPrefix} No se pudo extraer el ID del envío.`);
+
+  logger.info(`${logPrefix} Webhook recibido para shipment: ${shipmentId}`);
+  
+  // Delegar el procesamiento completo a la función reutilizable
+  await procesarShipmentCompleto(shipmentId, traceId);
 }
 
 // =================================================================
@@ -1047,7 +1098,46 @@ export const reprocesarEnviosInconsistentes = functions.https.onRequest(async (r
         try {
           logger.info(`${logPrefix} Intentando reprocesar Shipment ID: ${shipmentId}`);
 
-          await procesarConsolidacionDeEnvio(shipmentId, subTraceId);
+          // ✅ CORRECCIÓN: Ahora usa el flujo completo de procesamiento
+          // Esto replica exactamente lo que hace el webhook de shipments:
+          // 1. Obtener shipment desde MELI
+          // 2. Extraer pack_id
+          // 3. Consultar pack en MELI
+          // 4. Procesar cada orden (guardar en Orders/OrderItems/Shipments)
+          // 5. Consolidar (guardar en PedidosBS) SOLO si el estado es procesable
+          await procesarShipmentCompleto(shipmentId, subTraceId);
+
+          // --- PASO CRÍTICO: Verificar el estado del shipment ---
+          // Obtener el shipment desde nuestra DB (se actualizó en procesarShipmentCompleto)
+          const shipmentDoc = await db
+            .collection(firestoreCollections.shipments)
+            .doc(shipmentId)
+            .get();
+
+          if (!shipmentDoc.exists) {
+            logger.warn(
+              `${logPrefix} ⚠️ Shipment ${shipmentId} no existe en la DB después del procesamiento.`
+            );
+            await doc.ref.update({
+              estado_de_carga: "error",
+              ultimoIntento: Timestamp.now(),
+              ultimoError: "Shipment no encontrado en DB después del procesamiento",
+            });
+            return { shipmentId, status: "error", error: "Shipment no encontrado" };
+          }
+
+          const shipmentData = shipmentDoc.data();
+          const shipmentStatus = shipmentData?.status;
+          const shipmentSubstatus = shipmentData?.substatus;
+
+          // Verificar si el estado es procesable según las reglas de negocio
+          const esEstadoProcesable = businessRules.MELI_SHIPMENT_PROCESSABLE_STATES.some(
+            (validState) => {
+              const statusMatch = shipmentStatus === validState.status;
+              const substatusMatch = !validState.substatus || shipmentSubstatus === validState.substatus;
+              return statusMatch && substatusMatch;
+            }
+          );
 
           // --- VERIFICACIÓN CRÍTICA: ¿Se creó el pedido en PedidosBS? ---
           const pedidoDoc = await db
@@ -1066,20 +1156,35 @@ export const reprocesarEnviosInconsistentes = functions.https.onRequest(async (r
               pedido_creado_en: firestoreCollections.processedOrders,
             });
             return { shipmentId, status: "success" };
-          } else {
-            // ⚠️ NO SE CONSOLIDÓ: No hay pedido final (probablemente faltan órdenes)
-            logger.warn(
-              `${logPrefix} ⚠️ Reprocesamiento de ${shipmentId} no creó pedido en ${firestoreCollections.processedOrders}. Posiblemente faltan órdenes en la DB.`
+          } else if (!esEstadoProcesable) {
+            // ℹ️ ESTADO NO PROCESABLE: El shipment no requiere consolidación
+            logger.info(
+              `${logPrefix} ℹ️ Shipment ${shipmentId} tiene estado no procesable (${shipmentStatus}). No requiere consolidación.`
             );
             await doc.ref.update({
-              estado_de_carga: "sin carga", // Mantener como pendiente para futuros reintentos
+              estado_de_carga: "estado_no_procesable",
               ultimoIntento: Timestamp.now(),
-              ultimoError: "No se pudo consolidar: Hay órdenes disponibles en la DB local",
+              ultimoError: `Estado ${shipmentStatus} no requiere consolidación`,
+            });
+            return {
+              shipmentId,
+              status: "skipped",
+              error: `Estado ${shipmentStatus} no procesable`,
+            };
+          } else {
+            // ⚠️ NO SE CONSOLIDÓ: Estado procesable pero sin pedido (faltan órdenes o error en consolidación)
+            logger.warn(
+              `${logPrefix} ⚠️ Shipment ${shipmentId} tiene estado procesable (${shipmentStatus}) pero no se creó pedido. Posiblemente faltan órdenes.`
+            );
+            await doc.ref.update({
+              estado_de_carga: "sin carga",
+              ultimoIntento: Timestamp.now(),
+              ultimoError: `Estado procesable (${shipmentStatus}) pero sin pedido consolidado`,
             });
             return {
               shipmentId,
               status: "pending",
-              error: "No hay órdenes para consolidar",
+              error: "Estado procesable pero sin pedido",
             };
           }
         } catch (error) {
@@ -1317,263 +1422,3 @@ export const notificarInconsistenciaPorEmail = onDocumentWritten(
     }
   }
 );
-
-// =================================================================
-// ============ SIMULACIÓN DE WEBHOOKS PARA INCONSISTENCIAS ========
-// =================================================================
-
-/**
- * Función auxiliar para crear un delay (espera) de forma asíncrona.
- * Útil para evitar sobrecargar el sistema al inyectar webhooks masivamente.
- * 
- * @param ms - Tiempo de espera en milisegundos
- * @returns Promise que se resuelve después del tiempo especificado
- */
-function esperarMs(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Verifica si ya existe un webhook para una orden específica.
- * 
- * @param orderId - ID de la orden a verificar
- * @param traceId - ID de trazabilidad para logging
- * @returns true si el webhook ya existe, false si no existe
- */
-async function verificarWebhookExistente(
-  orderId: string,
-  traceId: string
-): Promise<boolean> {
-  const logPrefix = `[Trace: ${traceId}] [verificarWebhookExistente]`;
-  const resource = `/orders/${orderId}`;
-  
-  try {
-    const snapshot = await db
-      .collection(firestoreCollections.meliNotifications)
-      .where("resource", "==", resource)
-      .limit(1)
-      .get();
-    
-    const existe = !snapshot.empty;
-    
-    if (existe) {
-      logger.info(`${logPrefix} Webhook ya existe para order ${orderId}. Saltando.`);
-    }
-    
-    return existe;
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} Error al verificar webhook existente para order ${orderId}`, {
-      error: err.message,
-    });
-    // En caso de error, asumir que no existe para continuar
-    return false;
-  }
-}
-
-/**
- * Crea un documento de webhook simulado en la colección webhookRecibidosMercadoLibre.
- * El documento se crea SIN el campo 'status' para que el trigger procesarNotificacionMeli
- * lo detecte y procese como una notificación nueva.
- * 
- * @param orderId - ID de la orden para la cual crear el webhook
- * @param traceId - ID de trazabilidad para logging
- * @returns Promise que se resuelve cuando se crea el documento
- */
-async function crearWebhookSimulado(
-  orderId: string,
-  traceId: string
-): Promise<void> {
-  const logPrefix = `[Trace: ${traceId}] [crearWebhookSimulado]`;
-  const resource = `/orders/${orderId}`;
-  const webhookId = uuidv4();
-  
-  const webhookData = {
-    application_id: 2221674115246629,
-    attempts: 1,
-    fechaHoraRecepcionEnFuncion: Timestamp.now(),
-    idWML: webhookId,
-    received: Timestamp.now(),
-    sent: Timestamp.now(),
-    resource: resource,
-    topic: "orders_v2",
-    user_id: 454112654,
-    // IMPORTANTE: NO incluir campo 'status' para que el trigger lo procese
-  };
-  
-  try {
-    await db
-      .collection(firestoreCollections.meliNotifications)
-      .doc(webhookId)
-      .set(webhookData);
-    
-    logger.info(`${logPrefix} ✅ Webhook simulado creado para order ${orderId}`, {
-      webhookId,
-      resource,
-    });
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} ❌ Error al crear webhook simulado para order ${orderId}`, {
-      error: err.message,
-      stack: err.stack,
-    });
-    throw error;
-  }
-}
-
-/**
- * Cloud Function HTTP que simula la inyección de webhooks para órdenes pendientes.
- * 
- * **PROPÓSITO:**
- * Lee órdenes esperadas desde enviosConInconsistencias (estado "sin carga") y crea
- * webhooks simulados para disparar el procesamiento normal del pipeline.
- * 
- * **FLUJO:**
- * 1. Busca documentos en enviosConInconsistencias con estado_de_carga = "sin carga"
- * 2. Extrae ordenesEsperadas de cada documento
- * 3. Para cada order ID:
- *    a. Verifica si ya existe webhook en webhookRecibidosMercadoLibre
- *    b. Si NO existe, crea documento de webhook simulado
- *    c. Espera 500ms antes de procesar la siguiente
- * 
- * **SEGURIDAD:**
- * Requiere Bearer token en header Authorization (schedulerSecret)
- * 
- * **USO:**
- * curl --location 'https://[URL]/simularWebhooksParaInconsistencias' \
- *   --header 'Authorization: Bearer [SECRET]'
- */
-export const simularWebhooksParaInconsistencias = functions.https.onRequest(async (req, res) => {
-  const traceId = uuidv4();
-  const logPrefix = `[Trace: ${traceId}] [SimularWebhooks]`;
-
-  logger.info(`${logPrefix} ========================================`);
-  logger.info(`${logPrefix} INICIO: Simulación de webhooks para órdenes pendientes`);
-  logger.info(`${logPrefix} ========================================`);
-
-  // =================================================================
-  // FASE 1: VALIDACIÓN DE SEGURIDAD
-  // =================================================================
-  if (req.headers.authorization !== `Bearer ${securityConfig.schedulerSecret}`) {
-    logger.error(`${logPrefix} ❌ Error de autorización. Secreto inválido o ausente.`);
-    res.status(401).send("Unauthorized");
-    return;
-  }
-  
-  logger.info(`${logPrefix} ✅ FASE 1: Autenticación exitosa`);
-
-  try {
-    // =================================================================
-    // FASE 2: BÚSQUEDA DE DOCUMENTOS PENDIENTES
-    // =================================================================
-    logger.info(`${logPrefix} FASE 2: Buscando documentos con estado "sin carga"...`);
-    
-    const snapshot = await db
-      .collection(firestoreCollections.reviewQueue)
-      .where("estado_de_carga", "==", "sin carga")
-      .get();
-
-    if (snapshot.empty) {
-      logger.info(`${logPrefix} No se encontraron documentos pendientes. Finalizando.`);
-      res.status(200).send("OK: No hay órdenes pendientes para procesar.");
-      return;
-    }
-
-    logger.info(`${logPrefix} ✅ Encontrados ${snapshot.size} documento(s) con estado "sin carga"`);
-
-    // =================================================================
-    // FASE 3: EXTRACCIÓN DE ÓRDENES ESPERADAS
-    // =================================================================
-    logger.info(`${logPrefix} FASE 3: Extrayendo órdenes esperadas de cada documento...`);
-    
-    const todasLasOrdenes: string[] = [];
-    
-    for (const doc of snapshot.docs) {
-      const data = doc.data() as InconsistencyLog;
-      const ordenesEsperadas = data.ordenesEsperadas || [];
-      
-      for (const orden of ordenesEsperadas) {
-        if (orden.id) {
-          todasLasOrdenes.push(orden.id);
-        }
-      }
-      
-      logger.info(`${logPrefix} Documento ${doc.id}: ${ordenesEsperadas.length} orden(es) esperada(s)`);
-    }
-    
-    const ordenesUnicas = [...new Set(todasLasOrdenes)]; // Eliminar duplicados
-    logger.info(`${logPrefix} ✅ Total de órdenes únicas a procesar: ${ordenesUnicas.length}`);
-
-    if (ordenesUnicas.length === 0) {
-      logger.info(`${logPrefix} No hay órdenes para procesar. Finalizando.`);
-      res.status(200).send("OK: No hay órdenes válidas para procesar.");
-      return;
-    }
-
-    // =================================================================
-    // FASE 4: PROCESAMIENTO DE WEBHOOKS
-    // =================================================================
-    logger.info(`${logPrefix} FASE 4: Iniciando procesamiento de webhooks...`);
-    
-    let webhooksCreados = 0;
-    let webhooksExistentes = 0;
-    let errores = 0;
-
-    for (let i = 0; i < ordenesUnicas.length; i++) {
-      const orderId = ordenesUnicas[i];
-      const progreso = `[${i + 1}/${ordenesUnicas.length}]`;
-      
-      logger.info(`${logPrefix} ${progreso} Procesando order ${orderId}...`);
-      
-      try {
-        // Verificar si ya existe el webhook
-        const existe = await verificarWebhookExistente(orderId, traceId);
-        
-        if (existe) {
-          webhooksExistentes++;
-          logger.info(`${logPrefix} ${progreso} ⏭️ Order ${orderId}: Webhook ya existe`);
-        } else {
-          // Crear webhook simulado
-          await crearWebhookSimulado(orderId, traceId);
-          webhooksCreados++;
-          logger.info(`${logPrefix} ${progreso} ✅ Order ${orderId}: Webhook creado`);
-        }
-        
-        // Esperar 500ms antes de procesar el siguiente (solo si no es el último)
-        if (i < ordenesUnicas.length - 1) {
-          await esperarMs(500);
-        }
-        
-      } catch (error) {
-        errores++;
-        const err = error as Error;
-        logger.error(`${logPrefix} ${progreso} ❌ Error procesando order ${orderId}`, {
-          error: err.message,
-        });
-        // Continuar con la siguiente orden
-      }
-    }
-
-    // =================================================================
-    // FASE 5: RESUMEN Y FINALIZACIÓN
-    // =================================================================
-    logger.info(`${logPrefix} ========================================`);
-    logger.info(`${logPrefix} RESUMEN DE EJECUCIÓN`);
-    logger.info(`${logPrefix} ========================================`);
-    logger.info(`${logPrefix} Webhooks creados: ${webhooksCreados}`);
-    logger.info(`${logPrefix} Webhooks existentes (saltados): ${webhooksExistentes}`);
-    logger.info(`${logPrefix} Errores: ${errores}`);
-    logger.info(`${logPrefix} Total procesado: ${ordenesUnicas.length}`);
-    logger.info(`${logPrefix} ========================================`);
-
-    res.status(200).send("OK");
-
-  } catch (error) {
-    const err = error as Error;
-    logger.error(`${logPrefix} ❌ Error crítico en simulación de webhooks`, {
-      error: err.message,
-      stack: err.stack,
-    });
-    res.status(500).send("Error interno del servidor.");
-  }
-});

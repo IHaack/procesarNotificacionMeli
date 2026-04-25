@@ -261,6 +261,50 @@ export interface MeliShipmentPayload {
     comment?: string;
     zip_code?: string;
   };
+  destination?: {
+    comments?: string | null;
+    receiver_id?: number;
+    receiver_name?: string;
+    shipping_address?: {
+      country?: { id?: string; name?: string };
+      city?: { id?: string; name?: string };
+      state?: { id?: string; name?: string };
+      address_line?: string;
+      street_name?: string;
+      street_number?: string;
+      comment?: string | null;
+      zip_code?: string | null;
+      types?: string[];
+      scoring?: number;
+      agency?: {
+        carrier_id?: number | null;
+        phone?: string | null;
+        agency_id?: number | null;
+        description?: string | null;
+        type?: string | null;
+        open_hours?: string | null;
+      };
+      address_id?: number;
+      version?: string;
+      location_id?: number;
+      geolocation_type?: string;
+      latitude?: number;
+      longitude?: number;
+      geolocation_source?: string;
+      delivery_preference?: string;
+      node?: any;
+      intersection?: string | null;
+      neighborhood?: { id?: string | null; name?: string | null };
+      geolocation_last_updated?: string;
+      municipality?: { id?: string | null; name?: string | null };
+    };
+    type?: string;
+    receiver_phone?: string;
+    snapshot?: {
+      id?: string;
+      version?: number;
+    };
+  };
   status_history?: {
     date_shipped: string | null;
     date_delivered: string | null;

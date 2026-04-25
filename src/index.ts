@@ -24,6 +24,8 @@ import {
   fetchShipmentDetails,
   fetchBillingInfo,
   fetchPackDetails,
+  searchOrdersByShipment,
+  fetchAuthenticatedUserId,
 } from "./services/meli.services";
 import {
   mapToDbOrder,
@@ -801,6 +803,101 @@ async function processOrderTopic(notification: MeliNotification, traceId: string
  * @param traceId - ID de trazabilidad para logging
  * @returns Promise que se resuelve cuando el procesamiento termina
  */
+async function resolvePackAndOrderIds(
+  shipmentId: string,
+  meliShipment: any,
+  traceId: string
+): Promise<{ packId: string | null; orderIds: number[] }> {
+  const logPrefix = `[Trace: ${traceId}] [resolvePackAndOrderIds]`;
+
+  // Camino principal: pack_id directo desde shipment.external_reference.
+  if (meliShipment.external_reference) {
+    const packId = String(meliShipment.external_reference);
+    logger.info(`${logPrefix} pack_id obtenido desde external_reference: ${packId}`);
+    const packDetails = await fetchPackDetails(packId, traceId);
+    const orderIds = packDetails.orders.map((order) => order.id);
+
+    if (orderIds.length === 0) {
+      throw new Error(`${logPrefix} El pack ${packId} no contiene órdenes.`);
+    }
+
+    return {
+      packId,
+      orderIds,
+    };
+  }
+
+  // Fallback: resolver por orders/search con seller + shipping.id.
+  const sellerIdFromSource = meliShipment?.source?.sender_id || meliShipment?.source?.seller_id;
+  const sellerId = sellerIdFromSource || await fetchAuthenticatedUserId(traceId);
+
+  logger.info(
+    `${logPrefix} external_reference ausente. Activando fallback orders/search para seller=${sellerId}, shipment=${shipmentId}.`
+  );
+  const searchPayload = await searchOrdersByShipment(
+    Number(sellerId),
+    Number(shipmentId),
+    traceId
+  );
+
+  const results = searchPayload.results || [];
+  if (results.length === 0) {
+    throw new Error(
+      `${logPrefix} orders/search no devolvió resultados para shipment ${shipmentId}.`
+    );
+  }
+
+  const distinctPackIds = Array.from(
+    new Set(
+      results
+        .map((result) => result.pack_id)
+        .filter((packId): packId is number => typeof packId === "number")
+    )
+  );
+
+  if (distinctPackIds.length > 1) {
+    throw new Error(
+      `${logPrefix} orders/search devolvió múltiples pack_id para shipment ${shipmentId}: ${distinctPackIds.join(", ")}`
+    );
+  }
+
+  const orderIdsFromPayments = results.flatMap((result) =>
+    (result.payments || [])
+      .map((payment) => payment.order_id)
+      .filter((orderId): orderId is number => typeof orderId === "number")
+  );
+
+  // Respaldo: algunos escenarios pueden no incluir payments.order_id.
+  const fallbackOrderIdsFromResults = results
+    .map((result) => result.id)
+    .filter((orderId): orderId is number => typeof orderId === "number");
+
+  const dedupedOrderIds = Array.from(
+    new Set(
+      orderIdsFromPayments.length > 0 ? orderIdsFromPayments : fallbackOrderIdsFromResults
+    )
+  );
+
+  if (dedupedOrderIds.length === 0) {
+    throw new Error(
+      `${logPrefix} orders/search no entregó order_ids válidos para shipment ${shipmentId}.`
+    );
+  }
+
+  const resolvedPackId = distinctPackIds.length === 1
+    ? String(distinctPackIds[0])
+    : null;
+
+  logger.info(
+    `${logPrefix} Fallback orders/search resuelto. pack_id=${resolvedPackId || "(no aplica)"}, orders=${dedupedOrderIds.join(", ")}`
+  );
+
+  return {
+    packId: resolvedPackId,
+    orderIds: dedupedOrderIds,
+  };
+}
+
 async function procesarShipmentCompleto(shipmentId: string, traceId: string): Promise<void> {
   const logPrefix = `[Trace: ${traceId}] [procesarShipmentCompleto]`;
   logger.info(`${logPrefix} 🚀 Iniciado para shipment: ${shipmentId}`);
@@ -822,70 +919,43 @@ async function procesarShipmentCompleto(shipmentId: string, traceId: string): Pr
   }
 
   // ====================================================================
-  // PASO 2: Extraer pack_id desde external_reference o detectar order individual
+  // PASO 2: Resolver pack_id y order_ids (external_reference o fallback orders/search)
   // ====================================================================
-  // NOTA: external_reference contiene el pack_id para shipments con múltiples órdenes.
-  // Para órdenes individuales, puede no estar presente y debemos usar order_id.
-  let packId = meliShipment.external_reference;
-  
-  if (!packId) {
-    // Intentar detectar si es un shipment de orden individual
-    const orderId = (meliShipment as any).order_id;
-    
-    if (orderId) {
-      logger.info(`${logPrefix} 📦 Shipment sin pack_id detectado. Es una orden individual.`);
-      logger.info(`${logPrefix} Order ID: ${orderId}. Se procesará como pack de 1 orden.`);
-      packId = String(orderId);
-    } else {
-      // TODO: Según diagnóstico, este caso debería ser extremadamente raro.
-      // Si ocurre con frecuencia, revisar la arquitectura de MELI o nuestra lógica.
-      logger.error(`${logPrefix} ❌ ADVERTENCIA CRÍTICA: Shipment sin external_reference ni order_id.`);
-      logger.error(`${logPrefix} Esto indica un problema con los datos de MELI o una orden en estado inválido.`);
-      logger.error(`${logPrefix} Payload del shipment: ${JSON.stringify(meliShipment, null, 2)}`);
-      logger.error(`${logPrefix} Este shipment será ignorado. Requiere revisión manual urgente.`);
-      
-      // Registrar en reviewQueue para análisis
-      await db.collection(firestoreCollections.reviewQueue).doc(shipmentId).set({
-        id: shipmentId,
-        shipmentId: shipmentId,
-        meli_pack_id: '',
-        mensaje: 'Shipment sin external_reference ni order_id - datos incompletos desde MELI',
-        estado_de_carga: "sin carga",
-        ordenesEsperadas: [],
-        ordenesEncontradas: [],
-        payload_meli_pack: JSON.stringify(meliShipment, null, 2),
-        ultimoIntento: Timestamp.now(),
-      }, { merge: true });
-      
-      return;
-    }
-  }
-
-  logger.info(`${logPrefix} ✅ Pack ID obtenido: ${packId}`);
-
-  // ====================================================================
-  // PASO 3: Obtener órdenes del pack desde la API de MELI
-  // ====================================================================
-  logger.info(`${logPrefix} 📡 PASO 2: Consultando pack ${packId} para obtener órdenes...`);
-  let packDetails;
+  let packId: string | null = null;
+  let orderIds: number[] = [];
   try {
-    packDetails = await fetchPackDetails(packId, traceId);
-    logger.info(`${logPrefix} ✅ Pack obtenido. Contiene ${packDetails.orders.length} orden(es).`);
+    const resolved = await resolvePackAndOrderIds(shipmentId, meliShipment, traceId);
+    packId = resolved.packId;
+    orderIds = resolved.orderIds;
   } catch (error) {
     const err = error as Error;
-    logger.error(`${logPrefix} ❌ Error al obtener detalles del pack: ${err.message}`);
-    throw error;
+    logger.error(`${logPrefix} ❌ No se pudo resolver pack/orders para shipment ${shipmentId}: ${err.message}`);
+
+    await db.collection(firestoreCollections.reviewQueue).doc(shipmentId).set({
+      id: shipmentId,
+      shipmentId: shipmentId,
+      meli_pack_id: "",
+      mensaje: "No se pudo resolver pack_id/orders para el shipment (external_reference + fallback orders/search).",
+      estado_de_carga: "sin carga",
+      ordenesEsperadas: [],
+      ordenesEncontradas: [],
+      payload_meli_pack: JSON.stringify(meliShipment, null, 2),
+      ultimoError: err.message,
+      ultimoIntento: Timestamp.now(),
+    }, { merge: true });
+    return;
   }
+
+  logger.info(`${logPrefix} ✅ Pack ID resuelto: ${packId || "(sin pack, orden individual)"}`);
 
   // ====================================================================
   // PASO 4: Procesar cada orden del pack
   // ====================================================================
-  logger.info(`${logPrefix} 🔄 PASO 3: Procesando ${packDetails.orders.length} órdenes del pack...`);
+  logger.info(`${logPrefix} 🔄 PASO 3: Procesando ${orderIds.length} órdenes resueltas...`);
   
   const orderProcessingResults: { orderId: number; success: boolean; error?: string }[] = [];
   
-  for (const order of packDetails.orders) {
-    const orderId = order.id;
+  for (const orderId of orderIds) {
     logger.info(`${logPrefix} 📦 Procesando orden ${orderId}...`);
     
     try {
@@ -905,8 +975,8 @@ async function procesarShipmentCompleto(shipmentId: string, traceId: string): Pr
   const failedCount = orderProcessingResults.filter(r => !r.success).length;
   
   logger.info(`${logPrefix} 📊 Resumen de procesamiento de órdenes:`);
-  logger.info(`${logPrefix}    ✅ Exitosas: ${successCount}/${packDetails.orders.length}`);
-  logger.info(`${logPrefix}    ❌ Fallidas: ${failedCount}/${packDetails.orders.length}`);
+  logger.info(`${logPrefix}    ✅ Exitosas: ${successCount}/${orderIds.length}`);
+  logger.info(`${logPrefix}    ❌ Fallidas: ${failedCount}/${orderIds.length}`);
   
   if (failedCount > 0) {
     const failedOrders = orderProcessingResults.filter(r => !r.success);

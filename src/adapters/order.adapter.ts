@@ -391,10 +391,13 @@ export function adaptarPedidoMeli(
       FechaOriginalPedido: fechaOriginalPedidoTS,
       EmisionDate: String(Math.floor(fechaOriginalPedidoTS.toMillis() / 1000)),
       GenerationDate: String(Math.floor(fechaOriginalPedidoTS.toMillis() / 1000)),
-      Comuna: meliShipment.receiver_address?.city?.name || "No especificada",
-      Region: meliShipment.receiver_address?.state?.name || "No especificada",
-      Pais: meliShipment.receiver_address?.country?.name || "Chile",
-      Domicilio: meliShipment.receiver_address?.address_line || "No especificada",
+      
+      // Compatibilidad Inteligente: Busca el formato nuevo (destination.shipping_address) o hace fallback al antiguo (receiver_address)
+      Comuna: (meliShipment.destination?.shipping_address?.city?.name || meliShipment.receiver_address?.city?.name) || "No especificada",
+      Region: (meliShipment.destination?.shipping_address?.state?.name || meliShipment.receiver_address?.state?.name) || "No especificada",
+      Pais: (meliShipment.destination?.shipping_address?.country?.name || meliShipment.receiver_address?.country?.name) || "Chile",
+      Domicilio: (meliShipment.destination?.shipping_address?.address_line || meliShipment.receiver_address?.address_line) || "No especificada",
+      
       Oficina: "Casa Matriz",
       DireccionOficina: "Casa Matriz",
       estatus_pago: meliOrder.status === "paid" ? "success" : meliOrder.status,

@@ -12,6 +12,7 @@ import {
   MeliShipmentPayload,
   MeliBillingInfoPayload,
   MeliPackPayload,
+  MeliOrderSearchPayload,
 } from "../interfaces/meli.interfaces";
 import { OAuthResponseDocument } from "../interfaces/oauth.interfaces";
 
@@ -195,6 +196,37 @@ function buildBillingInfoUrl(siteId: string, billingInfoId: string): string {
   return `${meliConfig.apiUrl}/orders/billing-info/${siteId}/${billingInfoId}`;
 }
 
+function normalizeBillingInfoPayload(raw: any): MeliBillingInfoPayload {
+  // Formato esperado actual
+  if (raw?.billing_info) {
+    return { billing_info: raw.billing_info };
+  }
+
+  // Formato observado en producción:
+  // { buyer: { billing_info: { identification: { type, number }, address... } } }
+  const buyerBillingInfo = raw?.buyer?.billing_info;
+  if (buyerBillingInfo) {
+    const identification = buyerBillingInfo.identification || {};
+    const address = buyerBillingInfo.address || {};
+
+    return {
+      billing_info: {
+        doc_type: identification.type || null,
+        doc_number: identification.number || null,
+        additional_info: [
+          { type: "CITY_NAME", value: address.city_name || "" },
+          { type: "STATE_NAME", value: address.state?.name || "" },
+          { type: "STATE_CODE", value: address.state?.code || "" },
+          { type: "STREET_NAME", value: address.street_name || "" },
+          { type: "STREET_NUMBER", value: address.street_number || "" },
+        ].filter((item) => item.value),
+      },
+    };
+  }
+
+  return { billing_info: { doc_type: null, doc_number: null } };
+}
+
 /**
  * Obtiene la información de facturación de una orden específica.
  */
@@ -218,11 +250,11 @@ export async function fetchBillingInfo(
   const accessToken = await getValidAccessToken();
 
   try {
-    const response = await axios.get<MeliBillingInfoPayload>(fullUrl, {
+    const response = await axios.get<any>(fullUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     logger.info(`${logPrefix} Información de facturación obtenida correctamente para ${fullUrl}.`);
-    return response.data;
+    return normalizeBillingInfoPayload(response.data);
   } catch (error: any) {
     const statusCode = error.response?.status;
     const errorData = error.response?.data;
@@ -330,6 +362,111 @@ export async function fetchPackDetails(
       mensajeDetallado += ` - ${errorData.error}`;
     }
     
+    throw new Error(mensajeDetallado);
+  }
+}
+
+/**
+ * Busca órdenes asociadas a un shipment para un seller dado.
+ * Se usa como fallback cuando el shipment no trae external_reference.
+ */
+export async function searchOrdersByShipment(
+  sellerId: number,
+  shipmentId: number,
+  traceId: string
+): Promise<MeliOrderSearchPayload> {
+  const logPrefix = `[Trace: ${traceId}] [searchOrdersByShipment]`;
+  logger.info(
+    `${logPrefix} Buscando orders para seller=${sellerId}, shipment=${shipmentId}.`
+  );
+
+  const accessToken = await getValidAccessToken();
+  const fullUrl = `${meliConfig.apiUrl}/orders/search?seller=${sellerId}&shipping.id=${shipmentId}`;
+
+  try {
+    const response = await axios.get<MeliOrderSearchPayload>(fullUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    logger.info(
+      `${logPrefix} Orders search obtenido correctamente. Results: ${response.data.results?.length || 0}`
+    );
+    return response.data;
+  } catch (error: any) {
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+
+    logger.error(
+      `${logPrefix} Error al buscar orders por shipment.`,
+      {
+        traceId: traceId,
+        url: fullUrl,
+        status: statusCode,
+        data: errorData,
+        message: errorMessage,
+      }
+    );
+
+    let mensajeDetallado = `${logPrefix} Fallo al consultar orders/search para seller=${sellerId}, shipment=${shipmentId}`;
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+    }
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+
+    throw new Error(mensajeDetallado);
+  }
+}
+
+/**
+ * Obtiene el user_id (seller) asociado al access token actual.
+ * Útil cuando el shipment no trae source.sender_id/source.seller_id.
+ */
+export async function fetchAuthenticatedUserId(traceId: string): Promise<number> {
+  const logPrefix = `[Trace: ${traceId}] [fetchAuthenticatedUserId]`;
+  logger.info(`${logPrefix} Consultando /users/me para resolver seller_id.`);
+
+  const accessToken = await getValidAccessToken();
+  const fullUrl = `${meliConfig.apiUrl}/users/me`;
+
+  try {
+    const response = await axios.get<{ id: number }>(fullUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const userId = response.data?.id;
+    if (!userId) {
+      throw new Error(`${logPrefix} /users/me no devolvió id de usuario.`);
+    }
+
+    logger.info(`${logPrefix} seller_id resuelto desde token: ${userId}`);
+    return userId;
+  } catch (error: any) {
+    const statusCode = error.response?.status;
+    const errorData = error.response?.data;
+    const errorMessage = error.message;
+
+    logger.error(`${logPrefix} Error consultando /users/me.`, {
+      traceId: traceId,
+      url: fullUrl,
+      status: statusCode,
+      data: errorData,
+      message: errorMessage,
+    });
+
+    let mensajeDetallado = `${logPrefix} Fallo al obtener seller_id desde /users/me`;
+    if (statusCode) {
+      mensajeDetallado += ` - HTTP ${statusCode}`;
+    }
+    if (errorData?.message) {
+      mensajeDetallado += ` - ${errorData.message}`;
+    } else if (errorData?.error) {
+      mensajeDetallado += ` - ${errorData.error}`;
+    }
+
     throw new Error(mensajeDetallado);
   }
 }

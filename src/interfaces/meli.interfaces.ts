@@ -201,6 +201,7 @@ export interface MeliShipmentPayload {
   tracking_number?: string | null;
   tracking_method?: string | null;
   external_reference?: string | null; // ← Pack ID asociado al shipment
+  order_id?: number | null;
   date_created?: string;
   last_updated?: string;
   declared_value?: number;
@@ -271,6 +272,10 @@ export interface MeliShipmentPayload {
     substatus: string;
     status: string;
   }[];
+  source?: {
+    seller_id?: number | null;
+    sender_id?: number | null;
+  };
 }
 
 // --- FIN: VERSIÓN ACTUALIZADA Y DETALLADA ---
@@ -318,6 +323,24 @@ export interface MeliPackPayload {
   };
   date_created?: string;
   last_updated?: string;
+}
+
+export interface MeliOrderSearchResult {
+  id: number;
+  pack_id?: number | null;
+  payments?: Array<{
+    order_id?: number | null;
+  }>;
+}
+
+export interface MeliOrderSearchPayload {
+  query?: string;
+  results: MeliOrderSearchResult[];
+  paging?: {
+    total?: number;
+    offset?: number;
+    limit?: number;
+  };
 }
 
 /**

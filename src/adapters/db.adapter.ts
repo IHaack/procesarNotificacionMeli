@@ -8,7 +8,6 @@ import * as logger from "firebase-functions/logger";
 import {
   MeliOrderPayload,
   MeliBillingInfo,
-  MeliShipmentPayload,
   MeliBillingInfoPayload
 } from "../interfaces/meli.interfaces";
 import { Order, OrderItem, Shipment } from "../interfaces/db.interfaces";
@@ -31,6 +30,13 @@ export function extractBillingInfo(rawInfo: any): {
   let docType = info.doc_type;
   let docNumber = info.doc_number;
 
+  // Compatibilidad con formato alternativo:
+  // billing_info.identification.{type,number}
+  if ((!docType || !docNumber) && info.identification) {
+    docType = docType || info.identification.type || null;
+    docNumber = docNumber || info.identification.number || null;
+  }
+
   let cityName = null;
   let stateName = null;
   let streetName = null;
@@ -50,6 +56,15 @@ export function extractBillingInfo(rawInfo: any): {
     stateName = getValue('STATE_NAME') || getValue('STATE_CODE');
     streetName = getValue('STREET_NAME');
     streetNumber = getValue('STREET_NUMBER');
+  }
+
+  // Compatibilidad con formato alternativo:
+  // billing_info.address.{city_name,state,street_name,street_number}
+  if ((!cityName || !stateName || !streetName || !streetNumber) && info.address) {
+    cityName = cityName || info.address.city_name || null;
+    stateName = stateName || info.address.state?.name || info.address.state?.code || null;
+    streetName = streetName || info.address.street_name || null;
+    streetNumber = streetNumber || info.address.street_number || null;
   }
 
   if (!docType && !docNumber) return null;
